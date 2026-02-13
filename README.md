@@ -1,1 +1,1 @@
-# AAUSAT6-C-
+# AAUSAT6 - C++
