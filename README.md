@@ -13,3 +13,16 @@ ${workspaceFolder}/**
 /usr/include/sysprof-6
 /usr/include/opencv4
 ``` 
+
+Install these
+``` 
+gstreamer
+glib2
+gst-plugins-base
+gst-plugins-good
+gst-plugins-bad
+gst-plugins-ugly
+cmake
+vtk
+hdf5
+``` 
