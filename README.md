@@ -14,7 +14,7 @@ ${workspaceFolder}/**
 /usr/include/opencv4
 ``` 
 
-Install these
+Install these (arch btw)
 ``` 
 gstreamer
 glib2
@@ -25,4 +25,5 @@ gst-plugins-ugly
 cmake
 vtk
 hdf5
+opencv
 ``` 
