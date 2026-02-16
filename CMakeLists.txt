@@ -13,6 +13,12 @@ pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
 # Find OpenCV (if you have it installed)
 find_package(OpenCV REQUIRED)
 
+# Find Qt6 (required by OpenCV modules compiled with Qt support)
+find_package(Qt6 COMPONENTS Core Gui Widgets QUIET)
+if(Qt6_FOUND)
+    message(STATUS "Found Qt6: ${Qt6_VERSION}")
+endif()
+
 # Create executable
 add_executable(video_stabilization
     src/main.cpp
@@ -28,3 +34,12 @@ target_link_libraries(video_stabilization
     ${GSTREAMER_LIBRARIES}
     ${OpenCV_LIBS}
 )
+
+# Link Qt6 if found (required for OpenCV modules with Qt support)
+if(Qt6_FOUND)
+    target_link_libraries(video_stabilization 
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Widgets
+    )
+endif()
