@@ -1,4 +1,8 @@
 #include "interfaces.h"
+#include "Gstreamer/gstreamervideo.h"
+#include "ObjectDetection/StubDetector.h"
+#include "Stabilization/StubStabilizer.h"
+#include "Cropping/StubCropper.h"
 
 #include <gst/gst.h>
 #include <opencv2/highgui.hpp>
@@ -8,10 +12,9 @@
 #include <memory>
 #include <string>
 
-#include <Cropping/StubCropper.cpp>
-#include <Gstreamer/gstreamervideo.cpp>
-#include <ObjectDetection/StubDetector.cpp>
-#include <Stabilization/StubStabilizer.cpp>
+// ─────────────────────────────────────────────────────────────────────────────
+// Graceful shutdown on Ctrl-C
+// ─────────────────────────────────────────────────────────────────────────────
 
 static std::atomic<bool> g_shutdown{ false };
 
@@ -23,10 +26,10 @@ static void signal_handler(int /*sig*/)
 // ─────────────────────────────────────────────────────────────────────────────
 // Build the GStreamer launch string
 //
-// Source: file  →  decode  →  scale to 4K  →  BGR conversion  →  appsink
+// Source: file  →  decode  →  framerate  →  scale to 4K  →  BGR  →  appsink
 //
 // If you want to later swap in a live camera, replace the first two elements:
-//   v4l2src device=/dev/video0 ! video/x-raw,width=3840,height=3072
+//   v4l2src device=/dev/video0 ! video/x-raw,width=4056,height=3040
 // ─────────────────────────────────────────────────────────────────────────────
 
 static std::string build_pipeline(const std::string& video_path)
@@ -44,6 +47,9 @@ static std::string build_pipeline(const std::string& video_path)
         "appsink name=sink sync=false";
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// main
+// ─────────────────────────────────────────────────────────────────────────────
 
 int main(int argc, char* argv[])
 {
@@ -57,10 +63,10 @@ int main(int argc, char* argv[])
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
                                           ? argv[1]
-                                          : "/home/digita/projects/AAUSAT6-C-/Untitled.mp4";
+                                          : "/home/slessing/Projects/AAUSAT6-C-/Untitled.mp4";
     const std::string reference_image = (argc > 2)
                                           ? argv[2]
-                                          : "reference_object.jpg";
+                                          : "/home/slessing/Projects/AAUSAT6-C-/reference_object.jpg";
 
     std::cout << "Video source  : " << video_path      << "\n"
               << "Reference img : " << reference_image  << "\n";
@@ -76,7 +82,7 @@ int main(int argc, char* argv[])
         std::cerr << "Detector init failed.\n";
         return 1;
     }
-    if (!stabilizer->init("","")) {
+    if (!stabilizer->init("", "")) {
         std::cerr << "Stabilizer init failed.\n";
         return 1;
     }
@@ -106,7 +112,7 @@ int main(int argc, char* argv[])
         // 2. Object detection → get center point only.
         DetectionResult detection = detector->detect(raw);
         if (detection.valid) {
-            // (Optional) overlay the detected centre on a debug view.
+            // Overlay detected centre
             cv::circle(raw.data,
                        static_cast<cv::Point>(detection.center),
                        12, { 0, 255, 0 }, 2);
