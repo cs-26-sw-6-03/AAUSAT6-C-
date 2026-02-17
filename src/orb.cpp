@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     gst_init(&argc, &argv);
     
     // Init ORB class
-    Ptr<ORB> orb = ORB::create(500);
+    Ptr<ORB> orb = ORB::create(100);
     
     cout << "GStreamer initialized successfully!" << endl;
     
@@ -85,9 +85,10 @@ int main(int argc, char *argv[]) {
     // Create pipeline with appsink to extract frames
     GError *error = nullptr;
     GstElement *pipeline = gst_parse_launch(
-        "videotestsrc num-buffers=300 ! "
+        "filesrc location=/home/digita/projects/AAUSAT6-C-/Untitled.mp4 ! "
+        "decodebin ! "
         "videoconvert ! "
-        "video/x-raw,format=BGR ! "  // Convert to BGR for OpenCV
+        "video/x-raw,format=BGR ! "
         "appsink name=sink sync=false",
         &error
     );
