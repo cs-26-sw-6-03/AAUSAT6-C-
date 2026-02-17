@@ -1,53 +1,44 @@
 #include <gst/gst.h>
-#include <iostream>
+#include <gst/app/gstappsink.h>
+#include <opencv2/opencv.hpp>
 
 int main(int argc, char *argv[]) {
-    // Initialize GStreamer
     gst_init(&argc, &argv);
-    
-    std::cout << "GStreamer initialized successfully!" << std::endl;
-    
-    // Get version
-    guint major, minor, micro, nano;
-    gst_version(&major, &minor, &micro, &nano);
-    
-    std::cout << "GStreamer version: " 
-              << major << "." << minor << "." << micro << std::endl;
-    
-    // Create a simple pipeline
-    GError *error = nullptr;
+
     GstElement *pipeline = gst_parse_launch(
-        "videotestsrc num-buffers=100 ! autovideosink",
-        &error
-    );
-    
-    if (error) {
-        std::cerr << "Error: " << error->message << std::endl;
-        g_error_free(error);
-        return 1;
-    }
-    
-    std::cout << "Pipeline created, starting playback..." << std::endl;
-    
-    // Start playing
+        "v4l2src device=/dev/video0 ! "
+        "video/x-raw,width=1280,height=720,format=BGR ! "
+        "appsink name=sink sync=false", 
+        nullptr);
+
+    GstElement *appsink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
+
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
-    
-    // Wait until error or EOS (end of stream)
-    GstBus *bus = gst_element_get_bus(pipeline);
-    GstMessage *msg = gst_bus_timed_pop_filtered(
-        bus,
-        GST_CLOCK_TIME_NONE,
-        (GstMessageType)(GST_MESSAGE_ERROR | GST_MESSAGE_EOS)
-    );
-    
-    // Cleanup
-    if (msg) {
-        gst_message_unref(msg);
+
+    while (true) {
+        GstSample *sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
+        if (!sample) break;
+
+        GstBuffer *buffer = gst_sample_get_buffer(sample);
+        GstCaps *caps = gst_sample_get_caps(sample);
+        GstStructure *s = gst_caps_get_structure(caps, 0);
+
+        int width, height;
+        gst_structure_get_int(s, "width", &width);
+        gst_structure_get_int(s, "height", &height);
+
+        GstMapInfo map;
+        gst_buffer_map(buffer, &map, GST_MAP_READ);
+
+        // Wrap buffer memory into OpenCV Mat (NO COPY)
+        cv::Mat frame(height, width, CV_8UC3, (char*)map.data);
+
+        // Use frame here (ORB/SIFT/etc)
+
+        gst_buffer_unmap(buffer, &map);
+        gst_sample_unref(sample);
     }
-    gst_object_unref(bus);
+
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
-    
-    std::cout << "Done!" << std::endl;
-    return 0;
 }

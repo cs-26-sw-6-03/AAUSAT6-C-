@@ -21,18 +21,20 @@ endif()
 
 # Create executable
 add_executable(video_stabilization
-    src/main.cpp
+    src/Fast.cpp
 )
 
 # Link libraries
 target_include_directories(video_stabilization PRIVATE 
     ${GSTREAMER_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${GSTREAMER_APP_INCLUDE_DIRS}
 )
 
 target_link_libraries(video_stabilization 
     ${GSTREAMER_LIBRARIES}
     ${OpenCV_LIBS}
+    ${GSTREAMER_APP_LIBRARIES}
 )
 
 # Link Qt6 if found (required for OpenCV modules with Qt support)
