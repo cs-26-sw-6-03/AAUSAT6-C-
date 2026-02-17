@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     gst_init(&argc, &argv);
     
     // Init ORB class
-    Ptr<ORB> orb = ORB::create(100);
+    Ptr<ORB> orb = ORB::create(10);
     
     cout << "GStreamer initialized successfully!" << endl;
     
