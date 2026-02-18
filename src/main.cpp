@@ -4,6 +4,7 @@
 #include "Stabilization/StubStabilizer.h"
 #include "Cropping/StubCropper.h"
 #include "VideoOutputStream/OpenCVWindowOutput.h"
+#include "VideoOutputStream/GstreamerFileOutput.h"
 
 #include <gst/gst.h>
 #include <opencv2/highgui.hpp>
@@ -62,6 +63,19 @@ static std::string build_pipeline(const std::string& video_path,
 
 // ─────────────────────────────────────────────────────────────────────────────
 // main
+//
+// Usage:
+//   ./video_pipeline <input_video> <reference_image> [output_file]
+//
+// Arguments:
+//   input_video      - Path to input video file (required)
+//   reference_image  - Path to reference object image (required)
+//   output_file      - Optional: Path to output video file (e.g., output.mp4)
+//                      If not specified, displays output in a window
+//
+// Examples:
+//   ./video_pipeline input.mp4 reference.jpg
+//   ./video_pipeline input.mp4 reference.jpg output.mp4
 // ─────────────────────────────────────────────────────────────────────────────
 
 int main(int argc, char* argv[])
@@ -86,16 +100,27 @@ int main(int argc, char* argv[])
     const std::string reference_image = (argc > 2)
                                           ? argv[2]
                                           : "/home/slessing/Projects/AAUSAT6-C-/reference_object.jpg";
+    const std::string output_file     = (argc > 3) ? argv[3] : "";  // Optional output file
 
     std::cout << "Video source  : " << video_path      << "\n"
               << "Reference img : " << reference_image  << "\n";
+    if (!output_file.empty()) {
+        std::cout << "Output file   : " << output_file << "\n";
+    }
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto input      = std::make_unique<GstreamerCapture>();
     auto detector   = std::make_unique<StubDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
-    auto output     = std::make_unique<OpenCVWindowOutput>();
+    
+    // Create appropriate output stream based on whether output file is specified
+    std::unique_ptr<IVideoOutputStream> output;
+    if (!output_file.empty()) {
+        output = std::make_unique<GstreamerFileOutput>();
+    } else {
+        output = std::make_unique<OpenCVWindowOutput>();
+    }
 
     // ── Init detection & stabilization ──────────────────────────────────────
     if (!detector->init("", "", reference_image)) {
@@ -108,10 +133,21 @@ int main(int argc, char* argv[])
     }
 
     // ── Init output stream ───────────────────────────────────────────────────
-    std::string window_title = "Output (" + 
-                               std::to_string(res_config.output_width) + "x" + 
-                               std::to_string(res_config.output_height) + ")";
-    if (!output->init(window_title)) {
+    std::string output_config;
+    if (!output_file.empty()) {
+        // GStreamer file output: "output.mp4:x264:30:1920x1080"
+        output_config = output_file + ":x264:" + 
+                       std::to_string(30) + ":" +
+                       std::to_string(res_config.output_width) + "x" + 
+                       std::to_string(res_config.output_height);
+    } else {
+        // OpenCV window output: just the window title
+        output_config = "Output (" + 
+                       std::to_string(res_config.output_width) + "x" + 
+                       std::to_string(res_config.output_height) + ")";
+    }
+    
+    if (!output->init(output_config)) {
         std::cerr << "Output stream init failed.\n";
         return 1;
     }
