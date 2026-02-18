@@ -13,6 +13,17 @@
 #include <string>
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Resolution configuration
+// ─────────────────────────────────────────────────────────────────────────────
+
+struct ResolutionConfig {
+    int src_width;
+    int src_height;
+    int output_width;
+    int output_height;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Graceful shutdown on Ctrl-C
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -26,13 +37,14 @@ static void signal_handler(int /*sig*/)
 // ─────────────────────────────────────────────────────────────────────────────
 // Build the GStreamer launch string
 //
-// Source: file  →  decode  →  framerate  →  scale to 4K  →  BGR  →  appsink
+// Source: file  →  decode  →  framerate  →  scale to target resolution  →  BGR  →  appsink
 //
 // If you want to later swap in a live camera, replace the first two elements:
-//   v4l2src device=/dev/video0 ! video/x-raw,width=4056,height=3040
+//   v4l2src device=/dev/video0 ! video/x-raw,width=<src_w>,height=<src_h>
 // ─────────────────────────────────────────────────────────────────────────────
 
-static std::string build_pipeline(const std::string& video_path)
+static std::string build_pipeline(const std::string& video_path,
+                                   int src_width, int src_height)
 {
     return
         "filesrc location=" + video_path + " ! "
@@ -42,8 +54,8 @@ static std::string build_pipeline(const std::string& video_path)
         "videoconvert ! "
         "videoscale ! "
         "video/x-raw,format=BGR,"
-            "width=" + std::to_string(SRC_W) + ","
-            "height=" + std::to_string(SRC_H) + " ! "
+            "width=" + std::to_string(src_width) + ","
+            "height=" + std::to_string(src_height) + " ! "
         "appsink name=sink sync=false";
 }
 
@@ -59,7 +71,13 @@ int main(int argc, char* argv[])
     // ── Signal handling ──────────────────────────────────────────────────────
     std::signal(SIGINT,  signal_handler);
     std::signal(SIGTERM, signal_handler);
-
+    // ── Resolution Configuration ─────────────────────────────────────────────────────
+    ResolutionConfig res_config{
+        .src_width     = 4056,
+        .src_height    = 3040,
+        .output_width  = 1920,
+        .output_height = 1080
+    };
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
                                           ? argv[1]
@@ -88,7 +106,9 @@ int main(int argc, char* argv[])
     }
 
     // ── Start GStreamer capture ──────────────────────────────────────────────
-    const std::string pipeline_str = build_pipeline(video_path);
+    const std::string pipeline_str = build_pipeline(video_path,
+                                                     res_config.src_width,
+                                                     res_config.src_height);
     std::cout << "Pipeline: " << pipeline_str << "\n\n";
 
     if (!capture->start(pipeline_str)) {
@@ -121,11 +141,13 @@ int main(int argc, char* argv[])
         // 3. Video stabilization (operates at source resolution).
         StabilizedFrame stabilized = stabilizer->stabilize(raw, detection);
 
-        // 4. Crop to 1920×1080 centred on the detected object.
-        CroppedFrame output = cropper->crop(stabilized);
+        // 4. Crop to output resolution centred on the detected object.
+        CroppedFrame output = cropper->crop(stabilized,
+                                            res_config.output_width,
+                                            res_config.output_height);
 
         // 5. Display / hand off downstream.
-        cv::imshow("Output 1920x1080", output.data);
+        cv::imshow("Output", output.data);
 
         ++frame_count;
         if (frame_count % 30 == 0) {

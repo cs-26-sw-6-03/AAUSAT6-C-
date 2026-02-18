@@ -18,7 +18,7 @@
 
 // Raw frame coming off the GStreamer appsink — owns its data
 struct RawFrame {
-    cv::Mat               data;        // full 4K (e.g. 4056x3040) BGR image
+    cv::Mat               data;        // BGR image at source resolution
     std::int64_t          pts_ns = 0;  // PTS in nanoseconds
 };
 
@@ -36,21 +36,12 @@ struct StabilizedFrame {
     std::int64_t          pts_ns = 0;
 };
 
-// Final deliverable — 1920×1080 crop
+// Final deliverable — cropped region at requested output resolution
 struct CroppedFrame {
-    cv::Mat               data;        // exactly OUTPUT_W × OUTPUT_H
+    cv::Mat               data;        // cropped frame at output resolution
     cv::Rect              src_roi;     // the ROI used in the stabilized source
     std::int64_t          pts_ns = 0;
 };
-
-// ─────────────────────────────────────────────
-// Constants
-// ─────────────────────────────────────────────
-
-constexpr int SRC_W       = 4056;
-constexpr int SRC_H       = 3040;
-constexpr int OUTPUT_W    = 1920;
-constexpr int OUTPUT_H    = 1080;
 
 // ─────────────────────────────────────────────
 // I. GStreamer Capture Interface
@@ -131,10 +122,10 @@ public:
 // ─────────────────────────────────────────────
 
 // Takes a stabilized source-resolution frame and the desired crop center,
-// outputs a clamped OUTPUT_W×OUTPUT_H region.
+// outputs a clamped crop region at the requested output resolution.
 //
 // Clamping rule: if the ideal rect would exceed the source boundary, the rect
-// is shifted (not scaled) so it fits entirely within [0, SRC_W) × [0, SRC_H).
+// is shifted (not scaled) so it fits entirely within the source bounds.
 
 class IFrameCropper {
 public:
@@ -142,14 +133,18 @@ public:
 
     // Compute the output ROI from the given center, clamped to source bounds.
     // Pure utility — does not own state.
+    // All dimensions must be provided explicitly.
     virtual cv::Rect        compute_roi(cv::Point2f center,
-                                        int src_w = SRC_W,
-                                        int src_h = SRC_H,
-                                        int out_w = OUTPUT_W,
-                                        int out_h = OUTPUT_H) const = 0;
+                                        int src_w,
+                                        int src_h,
+                                        int out_w,
+                                        int out_h) const = 0;
 
     // Perform the actual crop and return the final frame.
-    virtual CroppedFrame    crop(const StabilizedFrame& frame) = 0;
+    // The output dimensions are specified by out_w and out_h.
+    virtual CroppedFrame    crop(const StabilizedFrame& frame,
+                                 int out_w,
+                                 int out_h) = 0;
 };
 
 // ─────────────────────────────────────────────
