@@ -1,6 +1,6 @@
 #include "interfaces.h"
 #include "Gstreamer/gstreamervideo.h"
-#include "ObjectDetection/StubDetector.h"
+#include "ObjectDetection/FastDetector.h"   // <- new detector implementation
 #include "Stabilization/StubStabilizer.h"
 #include "Cropping/StubCropper.h"
 
@@ -73,7 +73,8 @@ int main(int argc, char* argv[])
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto capture    = std::make_unique<GstreamerCapture>();
-    auto detector   = std::make_unique<StubDetector>();
+    // choose the FAST-based detector instead of the stub
+    auto detector   = std::make_unique<FastDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
 

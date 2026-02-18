@@ -1,5 +1,4 @@
 #include "gstreamervideo.h"
-
 #include <iostream>
 #include <stdexcept>
 
