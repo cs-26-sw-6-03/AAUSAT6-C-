@@ -1,45 +1,53 @@
-cmake_minimum_required(VERSION 3.10)
-project(VideoStabilization)
+cmake_minimum_required(VERSION 3.16)
+project(video_pipeline CXX)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# ── Dependencies ─────────────────────────────────────────────────────────────
 
-# Find GStreamer
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(GSTREAMER REQUIRED gstreamer-1.0)
-pkg_check_modules(GSTREAMER_APP REQUIRED gstreamer-app-1.0)
+pkg_check_modules(GST     REQUIRED gstreamer-1.0)
+pkg_check_modules(GST_APP REQUIRED gstreamer-app-1.0)
 
-# Find OpenCV (if you have it installed)
 find_package(OpenCV REQUIRED)
 
-# Find Qt6 (required by OpenCV modules compiled with Qt support)
-find_package(Qt6 COMPONENTS Core Gui Widgets QUIET)
-if(Qt6_FOUND)
-    message(STATUS "Found Qt6: ${Qt6_VERSION}")
-endif()
+# ── Include directories ──────────────────────────────────────────────────────
 
-# Create executable
-add_executable(video_stabilization
-    src/main.cpp
-)
-
-# Link libraries
-target_include_directories(video_stabilization PRIVATE 
-    ${GSTREAMER_INCLUDE_DIRS}
+include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${GST_INCLUDE_DIRS}
+    ${GST_APP_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
 )
 
-target_link_libraries(video_stabilization 
-    ${GSTREAMER_LIBRARIES}
+# ── Source files ─────────────────────────────────────────────────────────────
+
+set(SOURCES
+    src/main.cpp
+    src/Gstreamer/gstreamervideo.cpp
+    src/ObjectDetection/StubDetector.cpp
+    src/Stabilization/StubStabilizer.cpp
+    src/Cropping/StubCropper.cpp
+)
+
+# ── Main executable ──────────────────────────────────────────────────────────
+
+add_executable(video_pipeline ${SOURCES})
+
+target_link_libraries(video_pipeline PRIVATE
+    ${GST_LIBRARIES}
+    ${GST_APP_LIBRARIES}
     ${OpenCV_LIBS}
 )
 
-# Link Qt6 if found (required for OpenCV modules with Qt support)
-if(Qt6_FOUND)
-    target_link_libraries(video_stabilization 
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Widgets
-    )
-endif()
+target_compile_options(video_pipeline PRIVATE
+    ${GST_CFLAGS_OTHER}
+    -Wall -Wextra -Wpedantic
+)
+
+# ── Optional: Install target ─────────────────────────────────────────────────
+
+install(TARGETS video_pipeline
+    RUNTIME DESTINATION bin
+)
