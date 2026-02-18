@@ -1,15 +1,29 @@
 # AAUSAT6 - C++
 
-## Building
+## Building and running
+
+Using MakeFile:
 
 ```bash
-./build.sh
+#Available targets:
+make / make build       #- Build the project (default config)
+make build CONFIG=debug #- Build with debug configuration
+make build CONFIG=release #- Build with release configuration
+make run                #- Build and run the project
+make run ARGS='...'     #- Build and run with arguments
+make clean              #- Remove build directory
+make help               #- Show this help message
 ```
 
 Or use CMake directly:
+
 ```bash
 cmake --preset default
 cmake --build build
+# Go to build folder
+cd build
+# Run the code
+./video_pipeline [Args*]
 ```
 
 For now, there is no cross compilation to ARM, aka, the board that will be used. This will be added later.
