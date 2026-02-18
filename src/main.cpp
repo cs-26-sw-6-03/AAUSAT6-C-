@@ -1,8 +1,9 @@
 #include "interfaces.h"
-#include "Gstreamer/gstreamervideo.h"
-#include "ObjectDetection/StubDetector.h"
+#include "VideoInputStream/gstreamervideo.h"
+#include "FeatureDetection/StubDetector.h"
 #include "Stabilization/StubStabilizer.h"
 #include "Cropping/StubCropper.h"
+#include "VideoOutputStream/OpenCVWindowOutput.h"
 
 #include <gst/gst.h>
 #include <opencv2/highgui.hpp>
@@ -90,10 +91,11 @@ int main(int argc, char* argv[])
               << "Reference img : " << reference_image  << "\n";
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
-    auto capture    = std::make_unique<GstreamerCapture>();
+    auto input      = std::make_unique<GstreamerCapture>();
     auto detector   = std::make_unique<StubDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
+    auto output     = std::make_unique<OpenCVWindowOutput>();
 
     // ── Init detection & stabilization ──────────────────────────────────────
     if (!detector->init("", "", reference_image)) {
@@ -105,24 +107,32 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // ── Start GStreamer capture ──────────────────────────────────────────────
+    // ── Init output stream ───────────────────────────────────────────────────
+    std::string window_title = "Output (" + 
+                               std::to_string(res_config.output_width) + "x" + 
+                               std::to_string(res_config.output_height) + ")";
+    if (!output->init(window_title)) {
+        std::cerr << "Output stream init failed.\n";
+        return 1;
+    }
+
+    // ── Start input stream ───────────────────────────────────────────────────
     const std::string pipeline_str = build_pipeline(video_path,
                                                      res_config.src_width,
                                                      res_config.src_height);
     std::cout << "Pipeline: " << pipeline_str << "\n\n";
-
-    if (!capture->start(pipeline_str)) {
-        std::cerr << "Failed to start GStreamer pipeline.\n";
+    if (!input->start(pipeline_str)) {
+        std::cerr << "Failed to start input stream.\n";
         return 1;
     }
 
     // ── Frame loop ───────────────────────────────────────────────────────────
     std::size_t frame_count = 0;
 
-    while (!g_shutdown.load()) {
+    while (!g_shutdown.load() && output->is_open()) {
 
-        // 1. Pull raw 4K frame from the appsink (blocks until available or EOS).
-        auto maybe_frame = capture->pull_frame();
+        // 1. Pull raw frame from the input stream (blocks until available or EOS).
+        auto maybe_frame = input->pull_frame();
         if (!maybe_frame.has_value()) {
             std::cout << "Stream ended (EOS or error).\n";
             break;
@@ -142,28 +152,27 @@ int main(int argc, char* argv[])
         StabilizedFrame stabilized = stabilizer->stabilize(raw, detection);
 
         // 4. Crop to output resolution centred on the detected object.
-        CroppedFrame output = cropper->crop(stabilized,
-                                            res_config.output_width,
-                                            res_config.output_height);
+        CroppedFrame cropped = cropper->crop(stabilized,
+                                             res_config.output_width,
+                                             res_config.output_height);
 
-        // 5. Display / hand off downstream.
-        cv::imshow("Output", output.data);
+        // 5. Write to output stream (display window).
+        if (!output->write_frame(cropped)) {
+            std::cout << "Output stream closed.\n";
+            g_shutdown.store(true);
+        }
 
         ++frame_count;
         if (frame_count % 30 == 0) {
             std::cout << "Processed " << frame_count << " frames  |  "
-                      << "ROI: " << output.src_roi << "\n";
-        }
-
-        // Quit on 'q'.
-        if (cv::waitKey(1) == 'q') {
-            g_shutdown.store(true);
+                      << "ROI: " << cropped.src_roi << "\n";
         }
     }
 
     // ── Cleanup ──────────────────────────────────────────────────────────────
     stabilizer->flush();
-    capture->stop();
+    input->stop();
+    output->close();
     cv::destroyAllWindows();
 
     std::cout << "Done. Total frames processed: " << frame_count << "\n";

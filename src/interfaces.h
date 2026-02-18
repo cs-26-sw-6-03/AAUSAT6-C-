@@ -44,46 +44,88 @@ struct CroppedFrame {
 };
 
 // ─────────────────────────────────────────────
-// I. GStreamer Capture Interface
+// I. Video Input Stream Interface
 // ─────────────────────────────────────────────
 
-class IGstreamerCapture {
+// Generic interface for reading frames from any video source:
+// - Video files (via GStreamer, FFmpeg, OpenCV, etc.)
+// - Live cameras (v4l2, RTSP streams, etc.)
+// - Test patterns or synthetic data
+
+class IVideoInputStream {
 public:
-    virtual ~IGstreamerCapture() = default;
+    virtual ~IVideoInputStream() = default;
 
-    // Build & start the pipeline. Returns false on failure.
-    virtual bool            start(const std::string& pipeline_description) = 0;
+    // Initialize and start the stream with the given configuration.
+    // The config string format depends on the implementation.
+    // Returns false on failure.
+    virtual bool            start(const std::string& config) = 0;
 
-    // Stop and tear down the pipeline.
+    // Stop and tear down the stream.
     virtual void            stop() = 0;
 
-    // Pull the next frame from the appsink. Blocks until one is available
-    // or the pipeline is stopped. Returns nullopt when the stream ends (EOS)
+    // Pull the next frame from the stream. Blocks until one is available
+    // or the stream is stopped. Returns nullopt when the stream ends (EOS)
     // or on error.
     virtual std::optional<RawFrame> pull_frame() = 0;
 };
 
 // ─────────────────────────────────────────────
-// II. Object Detection Interface
+// II. Video Output Stream Interface
 // ─────────────────────────────────────────────
 
-// The detector is given a reference image (the "template" file) at init time.
-// For each call to detect(), it returns the pixel center of the best match
-// in the provided source-resolution frame.
+// Generic interface for displaying or saving output frames:
+// - OpenCV windows (cv::imshow)
+// - Video files (via GStreamer, FFmpeg, OpenCV VideoWriter, etc.)
+// - Network streams (RTSP, WebRTC, etc.)
+// - Headless/null sink for testing
 
-class IObjectDetector {
+class IVideoOutputStream {
 public:
-    virtual ~IObjectDetector() = default;
+    virtual ~IVideoOutputStream() = default;
 
-    // Load the DNN model and the reference object image.
-    //   model_config   – e.g. path to .cfg / .pbtxt
-    //   model_weights  – e.g. path to .weights / .pb / .onnx
-    //   reference_image – image file of the object to track
+    // Initialize the output stream with the given configuration.
+    // The config string format depends on the implementation.
+    // Returns false on failure.
+    virtual bool            init(const std::string& config) = 0;
+
+    // Write a frame to the output stream.
+    // Returns false on error.
+    virtual bool            write_frame(const CroppedFrame& frame) = 0;
+
+    // Flush any buffers and close the stream.
+    virtual void            close() = 0;
+
+    // Check if the output stream is still active.
+    // For windows: returns false if user closed the window.
+    // For files: returns false if write error occurred.
+    virtual bool            is_open() const = 0;
+};
+
+// ─────────────────────────────────────────────
+// III. Feature Detection Interface
+// ─────────────────────────────────────────────
+
+// Generic interface for detecting and describing features in frames.
+// Can be used for:
+// - Object detection (finding a reference object)
+// - Feature matching (BRISK, ORB, SIFT, etc.)
+// - Deep learning based detection
+// - Template matching
+
+class IFeatureDetector {
+public:
+    virtual ~IFeatureDetector() = default;
+
+    // Initialize the detector with configuration.
+    //   model_config   – e.g. path to .cfg / .pbtxt, or detector params
+    //   model_weights  – e.g. path to .weights / .pb / .onnx (if using DNN)
+    //   reference_image – image file of the object/pattern to track
     virtual bool            init(const std::string& model_config,
                                  const std::string& model_weights,
                                  const std::string& reference_image) = 0;
 
-    // Run detection on a full source-resolution frame.
+    // Run detection on a frame.
     // Returns a DetectionResult; result.valid == false if nothing found.
     virtual DetectionResult detect(const RawFrame& frame) = 0;
 
@@ -92,7 +134,7 @@ public:
 };
 
 // ─────────────────────────────────────────────
-// III. Video Stabilization Interface
+// IV. Video Stabilization Interface
 // ─────────────────────────────────────────────
 
 // Accepts the raw 4K frame plus the detected center (so the stabilizer can
@@ -118,7 +160,7 @@ public:
 };
 
 // ─────────────────────────────────────────────
-// IV. Cropping Interface
+// V. Cropping Interface
 // ─────────────────────────────────────────────
 
 // Takes a stabilized source-resolution frame and the desired crop center,
@@ -148,7 +190,7 @@ public:
 };
 
 // ─────────────────────────────────────────────
-// V. Pipeline Orchestrator Interface
+// VI. Pipeline Orchestrator Interface
 // ─────────────────────────────────────────────
 
 // Wires the four stages together and drives the frame loop.

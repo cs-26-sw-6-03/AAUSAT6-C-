@@ -25,10 +25,11 @@ include_directories(
 
 set(SOURCES
     src/main.cpp
-    src/Gstreamer/gstreamervideo.cpp
-    src/ObjectDetection/StubDetector.cpp
+    src/VideoInputStream/gstreamervideo.cpp
+    src/FeatureDetection/StubDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
+    src/VideoOutputStream/OpenCVWindowOutput.cpp
 )
 
 # ── Main executable ──────────────────────────────────────────────────────────
