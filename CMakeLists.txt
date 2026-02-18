@@ -29,6 +29,7 @@ set(SOURCES
     src/ObjectDetection/StubDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
+    src/ObjectDetection/ORBDetector.cpp
 )
 
 # ── Main executable ──────────────────────────────────────────────────────────
