@@ -1,0 +1,11 @@
+#pragma once
+
+#include "interfaces.h"
+
+class StubDetector : public IObjectDetector {
+public:
+    bool init(const std::string&, const std::string&,
+              const std::string&) override;
+
+    DetectionResult detect(const RawFrame& frame) override;
+};
