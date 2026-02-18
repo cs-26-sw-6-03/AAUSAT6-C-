@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // GstreamerCapture
 //
+// Implementation of IVideoInputStream using GStreamer.
 // Simplified implementation using the pull model — no queue, no mutex.
 //
 // Design:
@@ -20,14 +21,14 @@
 //   - GStreamer's internal appsink queue handles buffering (max-buffers=1)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class GstreamerCapture : public IGstreamerCapture {
+class GstreamerCapture : public IVideoInputStream {
 public:
     GstreamerCapture() = default;
     ~GstreamerCapture() override { stop(); }
 
-    // ── IGstreamerCapture ────────────────────────────────────────────────────
+    // ── IVideoInputStream ────────────────────────────────────────────────────
 
-    bool start(const std::string& pipeline_description) override;
+    bool start(const std::string& config) override;
     void stop() override;
 
     std::optional<RawFrame> pull_frame() override;
