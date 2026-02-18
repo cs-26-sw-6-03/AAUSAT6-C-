@@ -63,17 +63,16 @@ int main(int argc, char* argv[])
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
                                           ? argv[1]
-                                          : "/home/slessing/Projects/AAUSAT6-C-/Untitled.mp4";
+                                          : "/home/tobia/GoogleEarthTest.mp4";
     const std::string reference_image = (argc > 2)
                                           ? argv[2]
-                                          : "/home/slessing/Projects/AAUSAT6-C-/reference_object.jpg";
+                                          : "/home/tobia/reference_object.jpg";
 
     std::cout << "Video source  : " << video_path      << "\n"
               << "Reference img : " << reference_image  << "\n";
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto capture    = std::make_unique<GstreamerCapture>();
-    // choose the FAST-based detector instead of the stub
     auto detector   = std::make_unique<FastDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();

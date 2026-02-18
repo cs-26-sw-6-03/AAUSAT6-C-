@@ -28,7 +28,7 @@ set(SOURCES
     src/main.cpp
     src/Gstreamer/gstreamervideo.cpp
     src/ObjectDetection/StubDetector.cpp
-    src/ObjectDetection/FastDetector.cpp          # new FAST implementation
+    src/ObjectDetection/FastDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
 )

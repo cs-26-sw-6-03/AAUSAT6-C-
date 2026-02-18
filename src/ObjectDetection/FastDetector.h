@@ -13,4 +13,5 @@ public:
               const std::string& reference_image) override;
 
     DetectionResult detect(const RawFrame& frame) override;
+    std::string reference_image_path;
 };
