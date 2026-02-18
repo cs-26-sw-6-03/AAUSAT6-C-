@@ -1,6 +1,7 @@
 #include "interfaces.h"
 #include "Gstreamer/gstreamervideo.h"
 #include "ObjectDetection/StubDetector.h"
+#include "ObjectDetection/BriskDetector.h"
 #include "Stabilization/StubStabilizer.h"
 #include "Cropping/StubCropper.h"
 
@@ -40,10 +41,7 @@ static std::string build_pipeline(const std::string& video_path)
         "videorate ! "                                   // ← Frame rate conversion
         "video/x-raw,framerate=30/1 ! "                  // ← Force 30fps output
         "videoconvert ! "
-        "videoscale ! "
-        "video/x-raw,format=BGR,"
-            "width=" + std::to_string(SRC_W) + ","
-            "height=" + std::to_string(SRC_H) + " ! "
+        "video/x-raw,format=BGR ! "                      // ← Accept any resolution
         "appsink name=sink sync=false";
 }
 
@@ -73,7 +71,7 @@ int main(int argc, char* argv[])
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto capture    = std::make_unique<GstreamerCapture>();
-    auto detector   = std::make_unique<StubDetector>();
+    auto detector   = std::make_unique<BriskDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
 

@@ -27,6 +27,7 @@ set(SOURCES
     src/main.cpp
     src/Gstreamer/gstreamervideo.cpp
     src/ObjectDetection/StubDetector.cpp
+    src/ObjectDetection/BriskDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
 )
