@@ -1,4 +1,4 @@
-#include "ObjectDetection/StubDetector.h"
+#include "FeatureDetection/StubDetector.h"
 #include <iostream>
 
 bool StubDetector::init(const std::string&, const std::string&,

@@ -2,7 +2,7 @@
 
 #include "interfaces.h"
 
-class StubDetector : public IObjectDetector {
+class StubDetector : public IFeatureDetector {
 public:
     bool init(const std::string&, const std::string&,
               const std::string&) override;

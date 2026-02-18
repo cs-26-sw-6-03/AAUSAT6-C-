@@ -19,12 +19,13 @@ cv::Rect StubCropper::compute_roi(cv::Point2f center,
     return { x, y, out_w, out_h };
 }
 
-CroppedFrame StubCropper::crop(const StabilizedFrame& frame)
+CroppedFrame StubCropper::crop(const StabilizedFrame& frame,
+                               int out_w, int out_h)
 {
     cv::Rect roi = compute_roi(
         frame.suggested_center,
         frame.data.cols, frame.data.rows,
-        OUTPUT_W, OUTPUT_H);
+        out_w, out_h);
 
     CroppedFrame cf;
     cf.data    = frame.data(roi).clone();

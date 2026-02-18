@@ -1,34 +1,18 @@
-# AAUSAT6 - C++
+# AAUSAT6 - C++ Video Pipeline
 
-## Building and running
-
-Using MakeFile:
-
-```bash
-#Available targets:
-make / make build       #- Build the project (default config)
-make build CONFIG=debug #- Build with debug configuration
-make build CONFIG=release #- Build with release configuration
-make run                #- Build and run the project
-make run ARGS='...'     #- Build and run with arguments
-make clean              #- Remove build directory
-make help               #- Show this help message
-```
-
-Or use CMake directly:
-
-```bash
-cmake --preset default
-cmake --build build
-# Go to build folder
-cd build
-# Run the code
-./video_pipeline [Args*]
-```
-
-For now, there is no cross compilation to ARM, aka, the board that will be used. This will be added later.
+Video processing pipeline with feature detection, stabilization, and cropping.
 
 ## Requirements
+
+- C++17 compiler (GCC/Clang)
+- CMake 3.16+
+- GStreamer 1.0
+- OpenCV 4.x
+- pkg-config
+
+
+
+## Dependencies
 
 Install these (arch btw):
 ``` 
@@ -43,6 +27,54 @@ vtk
 hdf5
 opencv
 qt6-base
+``` 
+
+**Arch Linux**:
+
+```bash
+sudo pacman -S gstreamer glib2 gst-plugins-base gst-plugins-good \
+               gst-plugins-bad gst-plugins-ugly cmake opencv
+```
+
+**Ubuntu/Debian**:
+
+```bash
+sudo apt install build-essential cmake pkg-config \
+                 libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+                 gstreamer1.0-plugins-{good,bad,ugly} libopencv-dev
+```
+
+## Building
+
+### Using Make (Recommended)
+
+```bash
+make        # Build the project
+make clean  # Clean build artifacts (do before building anew)
+```
+
+### Manual Build
+
+```bash
+cmake --preset default
+cmake --build build
+```
+
+## Running
+
+```bash
+# Display in window
+./build/video_pipeline <input_video> <reference_image>
+
+# Write to file
+./build/video_pipeline <input_video> <reference_image> <output.mp4>
+```
+
+### Development
+
+```bash
+make run ARGS='samples/test_clip.mp4 samples/area.png'
+make run ARGS='samples/test_clip.mp4 samples/area.png output.mp4'
 ``` 
 
 ## VS Code IntelliSense

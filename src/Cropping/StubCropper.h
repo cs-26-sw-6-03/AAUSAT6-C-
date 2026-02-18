@@ -8,5 +8,6 @@ public:
                          int src_w, int src_h,
                          int out_w, int out_h) const override;
 
-    CroppedFrame crop(const StabilizedFrame& frame) override;
+    CroppedFrame crop(const StabilizedFrame& frame,
+                      int out_w, int out_h) override;
 };
