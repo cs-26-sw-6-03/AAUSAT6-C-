@@ -62,6 +62,8 @@ cmake --build build
 
 ## Running
 
+As of 19/02/2026
+
 ```bash
 # Display in window
 ./build/video_pipeline <input_video> <reference_image>
@@ -70,7 +72,7 @@ cmake --build build
 ./build/video_pipeline <input_video> <reference_image> <output.mp4>
 ```
 
-### Development
+OR
 
 ```bash
 make run ARGS='samples/test_clip.mp4 samples/area.png'
