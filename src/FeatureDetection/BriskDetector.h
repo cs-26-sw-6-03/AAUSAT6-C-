@@ -12,7 +12,7 @@
  * 3. Matches features using BFMatcher with Hamming distance
  * 4. Returns the center of the matched object region
  */
-class BriskDetector : public IObjectDetector {
+class BriskDetector : public IFeatureDetector {
 public:
     BriskDetector();
     ~BriskDetector() override = default;
