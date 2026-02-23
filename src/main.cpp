@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
     }
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
-    auto capture    = std::make_unique<GstreamerCapture>();
+    auto input    = std::make_unique<GstreamerCapture>();
     auto detector   = std::make_unique<ORBDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();

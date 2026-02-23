@@ -11,7 +11,7 @@
 using namespace cv;
 using namespace std;
 
-class ORBDetector : public IObjectDetector {
+class ORBDetector : public IFeatureDetector {
 public:
     bool init(const std::string&, const std::string&,
               const std::string&) override;
