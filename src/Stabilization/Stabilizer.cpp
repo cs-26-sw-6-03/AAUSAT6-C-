@@ -13,7 +13,7 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame&       frame,
 {
     // No-op: forward the frame and centre unchanged.
     StabilizedFrame sf;
-    
+
     sf.data             = frame.data;        // zero-copy (same Mat header)
     if(detection.valid){
         sf.suggested_center = detection.center;
