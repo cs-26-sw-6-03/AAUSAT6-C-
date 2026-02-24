@@ -27,6 +27,7 @@ set(SOURCES
     src/main.cpp
     src/VideoInputStream/gstreamervideo.cpp
     src/FeatureDetection/StubDetector.cpp
+    src/FeatureDetection/BriskDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
     src/ObjectDetection/ORBDetector.cpp
@@ -47,6 +48,7 @@ target_link_libraries(video_pipeline PRIVATE
 target_compile_options(video_pipeline PRIVATE
     ${GST_CFLAGS_OTHER}
     -Wall -Wextra -Wpedantic
+    -O3
 )
 
 # ── Optional: Install target ─────────────────────────────────────────────────

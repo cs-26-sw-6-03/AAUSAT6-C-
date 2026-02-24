@@ -7,7 +7,11 @@ bool ORBDetector::init(const std::string&, const std::string&,
                        const std::string& reference_image)
 {
     std::cout << "[ORBDetector] init()\n";
-    ModelORB = ORB::create(500);
+    // nfeatures    - 400
+    // scale factor (ratio the image is divided by between scale in the pyramid of gaussians) - default: 1.2f
+    // nlevels (n of pyramid levels) - default 8
+    //ModelORB = ORB::create(400, 1.2f, 4);
+    ModelORB = ORB::create(400);
     reference_image_path = reference_image;
 
     // Load and compute reference descriptors ONCE here, not every frame
