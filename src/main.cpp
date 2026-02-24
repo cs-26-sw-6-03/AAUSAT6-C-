@@ -1,10 +1,11 @@
 #include "interfaces.h"
+#include "FeatureDetection/FastDetector.h"
 #include "VideoInputStream/gstreamervideo.h"
 #include "FeatureDetection/StubDetector.h"
 #include "FeatureDetection/BriskDetector.h"
 #include "Stabilization/StubStabilizer.h"
 #include "Cropping/StubCropper.h"
-#include "ObjectDetection/ORBDetector.h"
+#include "FeatureDetection/ORBDetector.h"
 #include "VideoOutputStream/OpenCVWindowOutput.h"
 #include "VideoOutputStream/GstreamerFileOutput.h"
 
@@ -104,10 +105,10 @@ int main(int argc, char* argv[])
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
                                           ? argv[1]
-                                          : "/home/slessing/Projects/AAUSAT6-C-/Untitled.mp4";
+                                          : "/home/tobia/GoogleEarthTest.mp4";
     const std::string reference_image = (argc > 2)
                                           ? argv[2]
-                                          : "/home/slessing/Projects/AAUSAT6-C-/reference_object.jpg";
+                                          : "/home/tobia/reference_object.jpg";
     const std::string output_file     = (argc > 3) ? argv[3] : "";  // Optional output file
 
     std::cout << "Video source  : " << video_path      << "\n"
@@ -118,7 +119,7 @@ int main(int argc, char* argv[])
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto input    = std::make_unique<GstreamerCapture>();
-    auto detector   = std::make_unique<ORBDetector>();
+    auto detector   = std::make_unique<FastDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
     
