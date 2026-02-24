@@ -26,13 +26,13 @@ include_directories(
 
 set(SOURCES
     src/main.cpp
-    src/ObjectDetection/FastDetector.cpp
+    src/FeatureDetection/FastDetector.cpp
     src/VideoInputStream/gstreamervideo.cpp
     src/FeatureDetection/StubDetector.cpp
     src/FeatureDetection/BriskDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
-    src/ObjectDetection/ORBDetector.cpp
+    src/FeatureDetection/ORBDetector.cpp
     src/VideoOutputStream/OpenCVWindowOutput.cpp
     src/VideoOutputStream/GstreamerFileOutput.cpp
 )

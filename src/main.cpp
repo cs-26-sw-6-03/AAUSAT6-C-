@@ -1,5 +1,4 @@
 #include "interfaces.h"
-#include "Gstreamer/gstreamervideo.h"
 #include "FeatureDetection/FastDetector.h"
 #include "VideoInputStream/gstreamervideo.h"
 #include "FeatureDetection/StubDetector.h"
@@ -110,6 +109,7 @@ int main(int argc, char* argv[])
     const std::string reference_image = (argc > 2)
                                           ? argv[2]
                                           : "/home/tobia/reference_object.jpg";
+    const std::string output_file     = (argc > 3) ? argv[3] : "";  // Optional output file
 
     std::cout << "Video source  : " << video_path      << "\n"
               << "Reference img : " << reference_image  << "\n";
@@ -119,7 +119,7 @@ int main(int argc, char* argv[])
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto input    = std::make_unique<GstreamerCapture>();
-    auto detector   = std::make_unique<ORBDetector>();
+    auto detector   = std::make_unique<FastDetector>();
     auto stabilizer = std::make_unique<StubStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
     
