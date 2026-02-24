@@ -52,9 +52,12 @@ static std::string build_pipeline(const std::string& video_path,
 {
     return
         "filesrc location=" + video_path + " ! "
-        "decodebin ! "
-        "videorate ! "                                   // ← Frame rate conversion
-        "video/x-raw,framerate=30/1 ! "                  // ← Force 30fps output
+        //decodebin // OpenH264 decoder, kinda does the mix of qtdemux,h264parse,avdec_h264, but worse
+        "qtdemux ! "                                     // Parse MP4 container
+        "h264parse ! "                                   // Parse H.264 stream
+        "avdec_h264 ! "                                  // Use libav decoder (better 4K support)
+        "videorate ! "                                   // Frame rate conversion
+        "video/x-raw,framerate=30/1 ! "                  // Force 30fps output
         "videoconvert ! "
         "videoscale ! "
         "video/x-raw,format=BGR,"

@@ -27,13 +27,14 @@ vtk
 hdf5
 opencv
 qt6-base
+gst-libav
 ``` 
 
 **Arch Linux**:
 
 ```bash
 sudo pacman -S gstreamer glib2 gst-plugins-base gst-plugins-good \
-               gst-plugins-bad gst-plugins-ugly cmake opencv
+               gst-plugins-bad gst-plugins-ugly gst-libav cmake opencv 
 ```
 
 **Ubuntu/Debian**:

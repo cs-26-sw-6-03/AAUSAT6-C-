@@ -4,8 +4,11 @@
 #include <iostream>
 
 BriskDetector::BriskDetector()
-    : brisk_(cv::BRISK::create())
-    , matcher_(cv::BFMatcher::create(cv::NORM_HAMMING, true))  // crossCheck=true
+    // thresh = threshold (default 30, higher = fewer keypoints = faster)
+    // octaves = scale levels (default 3, lower = fewer scales = faster)
+    : brisk_(cv::BRISK::create(60, 3))  
+    , matcher_(cv::BFMatcher::create(cv::NORM_HAMMING, false))  // crossCheck=false for kNN
+    //, matcher_(cv::FlannBasedMatcher(cv::makePtr<cv::flann::LshIndexParams>(12, 20, 2)))
 {
 }
 
@@ -52,7 +55,13 @@ DetectionResult BriskDetector::detect(const RawFrame& frame)
     result.valid = false;
     result.confidence = 0.0f;
     
-    if (frame.data.empty() || reference_descriptors_.empty()) {
+    if (frame.data.empty()) {
+        std::cerr << "[BriskDetector] ERROR: Frame data is EMPTY" << std::endl;
+        return result;
+    }
+    
+    if (reference_descriptors_.empty()) {
+        std::cerr << "[BriskDetector] ERROR: Reference descriptors are EMPTY" << std::endl;
         return result;
     }
     
@@ -64,11 +73,31 @@ DetectionResult BriskDetector::detect(const RawFrame& frame)
         frame_gray = frame.data;
     }
     
-    // Detect keypoints and compute descriptors for current frame
+    // Resize for speed: toggle to enable/disable
+    constexpr bool USE_RESIZE = false;     // Set to false to disable resize
+    constexpr float SCALE = 0.5f;         // Resize scale (0.5 = 4x faster)
+    
+    cv::Mat detection_frame;
     std::vector<cv::KeyPoint> frame_keypoints;
     cv::Mat frame_descriptors;
-    brisk_->detectAndCompute(frame_gray, cv::noArray(),
-                            frame_keypoints, frame_descriptors);
+    
+    if (USE_RESIZE) {
+        // Detect on resized image
+        cv::resize(frame_gray, detection_frame, cv::Size(), SCALE, SCALE, cv::INTER_LINEAR);
+        brisk_->detectAndCompute(detection_frame, cv::noArray(),
+                                frame_keypoints, frame_descriptors);
+        
+        // Scale keypoint coordinates back to original resolution
+        for (auto& kp : frame_keypoints) {
+            kp.pt.x /= SCALE;
+            kp.pt.y /= SCALE;
+            kp.size /= SCALE;
+        }
+    } else {
+        // Detect on full resolution
+        brisk_->detectAndCompute(frame_gray, cv::noArray(),
+                                frame_keypoints, frame_descriptors);
+    }
     
     if (frame_keypoints.empty() || frame_descriptors.empty()) {
         // No keypoints found in frame
@@ -81,7 +110,7 @@ DetectionResult BriskDetector::detect(const RawFrame& frame)
         matcher_->knnMatch(reference_descriptors_, frame_descriptors, 
                           knn_matches, 2);
     } catch (const cv::Exception& e) {
-        std::cerr << "[BriskDetector] Matching failed: " << e.what() << std::endl;
+        std::cerr << "[BriskDetector] ERROR: Matching failed: " << e.what() << std::endl;
         return result;
     }
     

@@ -48,6 +48,7 @@ target_link_libraries(video_pipeline PRIVATE
 target_compile_options(video_pipeline PRIVATE
     ${GST_CFLAGS_OTHER}
     -Wall -Wextra -Wpedantic
+    -O3
 )
 
 # ── Optional: Install target ─────────────────────────────────────────────────
