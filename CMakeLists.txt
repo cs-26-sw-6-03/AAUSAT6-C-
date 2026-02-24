@@ -26,11 +26,15 @@ include_directories(
 
 set(SOURCES
     src/main.cpp
-    src/Gstreamer/gstreamervideo.cpp
-    src/ObjectDetection/StubDetector.cpp
     src/ObjectDetection/FastDetector.cpp
+    src/VideoInputStream/gstreamervideo.cpp
+    src/FeatureDetection/StubDetector.cpp
+    src/FeatureDetection/BriskDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
+    src/ObjectDetection/ORBDetector.cpp
+    src/VideoOutputStream/OpenCVWindowOutput.cpp
+    src/VideoOutputStream/GstreamerFileOutput.cpp
 )
 
 # ── Main executable ──────────────────────────────────────────────────────────
@@ -47,6 +51,7 @@ target_link_libraries(video_pipeline PRIVATE
 target_compile_options(video_pipeline PRIVATE
     ${GST_CFLAGS_OTHER}
     -Wall -Wextra -Wpedantic
+    -O3
 )
 
 # ── Optional: Install target ─────────────────────────────────────────────────

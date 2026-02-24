@@ -1,4 +1,5 @@
-#include "gstreamervideo.h"
+#include "VideoInputStream/gstreamervideo.h"
+
 #include <iostream>
 #include <stdexcept>
 
@@ -6,7 +7,7 @@
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
-bool GstreamerCapture::start(const std::string& pipeline_description)
+bool GstreamerCapture::start(const std::string& config)
 {
     if (running_.load()) {
         std::cerr << "[GstreamerCapture] Already running — call stop() first.\n";
@@ -15,7 +16,7 @@ bool GstreamerCapture::start(const std::string& pipeline_description)
 
     // ── Build pipeline ───────────────────────────────────────────────────────
     GError* error = nullptr;
-    pipeline_ = gst_parse_launch(pipeline_description.c_str(), &error);
+    pipeline_ = gst_parse_launch(config.c_str(), &error);
 
     if (error) {
         std::cerr << "[GstreamerCapture] Pipeline parse error: "
