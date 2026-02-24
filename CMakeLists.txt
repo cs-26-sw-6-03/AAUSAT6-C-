@@ -28,6 +28,7 @@ set(SOURCES
     src/VideoInputStream/gstreamervideo.cpp
     src/FeatureDetection/StubDetector.cpp
     src/Stabilization/StubStabilizer.cpp
+    src/Stabilization/Stabilizer.cpp
     src/Cropping/StubCropper.cpp
     src/ObjectDetection/ORBDetector.cpp
     src/VideoOutputStream/OpenCVWindowOutput.cpp

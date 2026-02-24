@@ -108,3 +108,17 @@ DetectionResult ORBDetector::detect(const RawFrame& frame)
     r.valid      = true;
     return r;
 }
+
+std::vector<cv::KeyPoint> ORBDetector::detectKeypoints(const RawFrame& frame)
+{
+    std::vector<cv::KeyPoint> keypoints;
+
+    // Convert to grayscale
+    cv::Mat gray;
+    cv::cvtColor(frame.data, gray, cv::COLOR_BGR2GRAY);
+
+    // Detect keypoints
+    ModelORB->detect(gray, keypoints);
+
+    return keypoints;
+}

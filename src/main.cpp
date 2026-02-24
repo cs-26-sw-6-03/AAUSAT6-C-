@@ -185,8 +185,10 @@ int main(int argc, char* argv[])
                        12, { 0, 255, 0 }, 2);
         }
 
+        std::vector<cv::KeyPoint> kps = detector->detectKeypoints(raw);
+
         // 3. Video stabilization (operates at source resolution).
-        StabilizedFrame stabilized = stabilizer->stabilize(raw, detection);
+        StabilizedFrame stabilized = stabilizer->stabilize(raw, detection, kps);
 
         // 4. Crop to output resolution centred on the detected object.
         CroppedFrame cropped = cropper->crop(stabilized,

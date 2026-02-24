@@ -1,20 +1,19 @@
-#include "Stabilization/StubStabilizer.h"
+#include "Stabilization/Stabilizer.h"
 #include <iostream>
 
-bool StubStabilizer::init(const std::string&, const std::string&)
+bool Stabilizer::init(const std::string&, const std::string&)
 {
-    std::cout << "[StubStabilizer] init() — pass-through mode.\n";
+    std::cout << "[Stabilizer] init() — pass-through mode.\n";
     return true;
 }
 
-StabilizedFrame StubStabilizer::stabilize(const RawFrame&       frame,
-                                          const DetectionResult& detection,
-                                          const std::vector<cv::KeyPoint>& keypoints)
+StabilizedFrame Stabilizer::stabilize(const RawFrame&       frame,
+                                      const DetectionResult& detection,
+                                      const std::vector<cv::KeyPoint>& keypoints)
 {
-
-    (void)keypoints;
     // No-op: forward the frame and centre unchanged.
     StabilizedFrame sf;
+    
     sf.data             = frame.data;        // zero-copy (same Mat header)
     if(detection.valid){
         sf.suggested_center = detection.center;
@@ -26,4 +25,4 @@ StabilizedFrame StubStabilizer::stabilize(const RawFrame&       frame,
     return sf;
 }
 
-void StubStabilizer::flush() {}
+void Stabilizer::flush() {}
