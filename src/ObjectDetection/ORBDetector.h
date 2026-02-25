@@ -17,7 +17,6 @@ public:
               const std::string&) override;
 
     DetectionResult detect(const RawFrame& frame) override;
-    std::vector<cv::KeyPoint> detectKeypoints(const RawFrame& frame);
     Ptr<ORB> ModelORB;
     std::string reference_image_path;
     Mat objectMatGray;

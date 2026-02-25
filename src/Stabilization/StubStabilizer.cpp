@@ -8,11 +8,9 @@ bool StubStabilizer::init(const std::string&, const std::string&)
 }
 
 StabilizedFrame StubStabilizer::stabilize(const RawFrame&       frame,
-                                          const DetectionResult& detection,
-                                          const std::vector<cv::KeyPoint>& keypoints)
+                                          const DetectionResult& detection)
 {
 
-    (void)keypoints;
     // No-op: forward the frame and centre unchanged.
     StabilizedFrame sf;
     sf.data             = frame.data;        // zero-copy (same Mat header)

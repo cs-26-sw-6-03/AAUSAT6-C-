@@ -129,8 +129,6 @@ public:
     // Returns a DetectionResult; result.valid == false if nothing found.
     virtual DetectionResult detect(const RawFrame& frame) = 0;
 
-    virtual std::vector<cv::KeyPoint> detectKeypoints(const RawFrame& frame) = 0;
-
     // Optional: warm up the model with a dummy forward pass.
     virtual void            warmup() {}
 };
@@ -155,8 +153,7 @@ public:
     // Feed a new raw frame. Returns the stabilized version at the same
     // resolution, with the detected center adjusted for any applied transform.
     virtual StabilizedFrame stabilize(const RawFrame&      frame,
-                                      const DetectionResult& detection,
-                                      const std::vector<cv::KeyPoint>& keypoints) = 0;
+                                      const DetectionResult& detection) = 0;
 
     // Flush any internal buffer (call at EOS).
     virtual void            flush() = 0;
