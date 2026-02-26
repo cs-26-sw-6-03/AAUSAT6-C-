@@ -35,6 +35,7 @@ set(SOURCES
     src/FeatureDetection/ORBDetector.cpp
     src/VideoOutputStream/OpenCVWindowOutput.cpp
     src/VideoOutputStream/GstreamerFileOutput.cpp
+    src/Stabilization/EdRansacStabilizer.cpp
 )
 
 # ── Main executable ──────────────────────────────────────────────────────────

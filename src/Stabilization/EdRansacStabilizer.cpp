@@ -14,9 +14,9 @@ bool EDRansacStabilizer::init(const std::string& /*model_config*/,
     // Only create our own ORB model if no shared one has been provided.
     // If set_orb_model() is called after init(), own_orb_ is simply unused.
     if (!sharedorb_) {
-        ownedorb_ = cv::ORB::create(params_.orb_n_features);
+        ownedorb_ = cv::ORB::create(orb_n_features);
         std::cout << "[EDRansacStabilizer] No shared ORB model — created own ("
-                  << params_.orb_n_features << " features).\n";
+                  << orb_n_features << " features).\n";
     } else {
         std::cout << "[EDRansacStabilizer] Using shared ORB model from ORBDetector.\n";
     }
@@ -31,10 +31,10 @@ bool EDRansacStabilizer::init(const std::string& /*model_config*/,
     prev_desc_.release();
 
     std::cout << "[EDRansacStabilizer] Initialized.\n"
-              << "  Lowe ratio      : " << params_.lowe_ratio            << "\n"
-              << "  RANSAC thresh   : " << params_.ransac_reproj_thresh  << " px\n"
-              << "  ED threshold    : " << params_.ed_threshold          << " px\n"
-              << "  Smooth radius   : " << params_.smooth_radius         << " frames\n";
+              << "  Lowe ratio      : " << lowe_ratio            << "\n"
+              << "  RANSAC thresh   : " << ransac_reproj_thresh  << " px\n"
+              << "  ED threshold    : " << ed_threshold          << " px\n"
+              << "  Smooth radius   : " << smooth_radius         << " frames\n";
 
     return true;
 }
@@ -102,7 +102,7 @@ StabilizedFrame EDRansacStabilizer::stabilize(const RawFrame&        frame,
     std::vector<cv::Point2f> pts_prev, pts_curr;
     for (const auto& m : knn_matches) {
         if (m.size() < 2) continue;
-        if (m[0].distance < params_.lowe_ratio * m[1].distance) {
+        if (m[0].distance < lowe_ratio * m[1].distance) {
             pts_prev.push_back(prev_kps_[m[0].queryIdx].pt);
             pts_curr.push_back(curr_kps[m[0].trainIdx].pt);
         }
@@ -111,7 +111,7 @@ StabilizedFrame EDRansacStabilizer::stabilize(const RawFrame&        frame,
     // ── ED-RANSAC homography ─────────────────────────────────────────────────
     cv::Mat H_inter = cv::Mat::eye(3, 3, CV_64F);  // fallback: identity (no warp)
 
-    if ((int)pts_prev.size() >= params_.min_inliers) {
+    if ((int)pts_prev.size() >= min_inliers) {
         cv::Mat H = ed_ransac(pts_prev, pts_curr);
         if (!H.empty()) {
             H_inter = H;
@@ -187,13 +187,13 @@ StabilizedFrame EDRansacStabilizer::stabilize(const RawFrame&        frame,
 cv::Mat EDRansacStabilizer::ed_ransac(const std::vector<cv::Point2f>& pts_prev,
                                        const std::vector<cv::Point2f>& pts_curr) const
 {
-    if ((int)pts_prev.size() < params_.min_inliers) return {};
+    if ((int)pts_prev.size() < min_inliers) return {};
 
     // ── Pass 1: RANSAC ────────────────────────────────────────────────────────
     cv::Mat inlier_mask;
     cv::Mat H = cv::findHomography(pts_prev, pts_curr,
                                    cv::RANSAC,
-                                   params_.ransac_reproj_thresh,
+                                   ransac_reproj_thresh,
                                    inlier_mask);
     if (H.empty()) return {};
 
@@ -205,7 +205,7 @@ cv::Mat EDRansacStabilizer::ed_ransac(const std::vector<cv::Point2f>& pts_prev,
             inl_curr.push_back(pts_curr[i]);
         }
     }
-    if ((int)inl_prev.size() < params_.min_inliers) return {};
+    if ((int)inl_prev.size() < min_inliers) return {};
 
     // ── Pass 2: Euclidean distance filter ────────────────────────────────────
     std::vector<cv::Point2f> projected;
@@ -215,12 +215,12 @@ cv::Mat EDRansacStabilizer::ed_ransac(const std::vector<cv::Point2f>& pts_prev,
     for (int i = 0; i < (int)inl_prev.size(); ++i) {
         float dx = projected[i].x - inl_curr[i].x;
         float dy = projected[i].y - inl_curr[i].y;
-        if (std::sqrt(dx * dx + dy * dy) < params_.ed_threshold) {
+        if (std::sqrt(dx * dx + dy * dy) < ed_threshold) {
             ed_prev.push_back(inl_prev[i]);
             ed_curr.push_back(inl_curr[i]);
         }
     }
-    if ((int)ed_prev.size() < params_.min_inliers) return {};
+    if ((int)ed_prev.size() < min_inliers) return {};
 
     // ── Final: least-squares re-estimation on clean set ──────────────────────
     return cv::findHomography(ed_prev, ed_curr, 0);
@@ -236,7 +236,7 @@ cv::Mat EDRansacStabilizer::ed_ransac(const std::vector<cv::Point2f>& pts_prev,
 
 cv::Mat EDRansacStabilizer::smooth_transform(std::size_t idx) const
 {
-    int from  = std::max(0, (int)idx - params_.smooth_radius);
+    int from  = std::max(0, (int)idx - smooth_radius);
     int to    = (int)idx;
 
     cv::Mat sum = cv::Mat::zeros(3, 3, CV_64F);

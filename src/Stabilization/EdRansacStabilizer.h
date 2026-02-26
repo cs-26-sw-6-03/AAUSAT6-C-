@@ -6,22 +6,16 @@
 
 class EDRansacStabilizer : public IVideoStabilizer {
 public:
-    struct Params {
-        int    orb_n_features    = 2000;  //Maximum amount, not amount to find
 
-        float  lowe_ratio         = 0.75f;
 
-        double ransac_reproj_thresh = 3.0;  // pixels
+    int    orb_n_features        = 2000;
+    float  lowe_ratio            = 0.75f;
+    double ransac_reproj_thresh  = 3.0;   // pixels
+    float  ed_threshold          = 0.5f;  // pixels
+    int    min_inliers           = 10;
+    int    smooth_radius         = 15;    // trailing frames
 
-        // ED-RANSAC secondary filter
-        float  ed_threshold       = 0.5f;  // pixels — tighten for higher precision
-        int    min_inliers        = 10;    // Minimum amount of inlies to accept frame
-
-        // Trajectory smoothing window (frames)
-        int    smooth_radius      = 15;
-    };
-
-    explicit EDRansacStabilizer(Params p = {}) : params_(p) {}
+    EDRansacStabilizer()  = default;
     ~EDRansacStabilizer() override = default;
 
     void set_orb_model(cv::Ptr<cv::ORB> sharedorb) { sharedorb_ = sharedorb; }
@@ -35,8 +29,6 @@ public:
     void flush() override {}
 
 private:
-    Params params_;
-
     //Could also use SIFT, BRISK or Fast, for fast we would also need a descriptor, but we do that in the detector, so that approach can be reused
     cv::Ptr<cv::ORB>     sharedorb_;
     cv::Ptr<cv::ORB>     ownedorb_;
