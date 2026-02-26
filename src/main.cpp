@@ -2,8 +2,9 @@
 #include "VideoInputStream/gstreamervideo.h"
 #include "FeatureDetection/StubDetector.h"
 #include "Stabilization/StubStabilizer.h"
+#include "Stabilization/Stabilizer.h"
 #include "Cropping/StubCropper.h"
-#include "ObjectDetection/ORBDetector.h"
+#include "FeatureDetection/ORBDetector.h"
 #include "VideoOutputStream/OpenCVWindowOutput.h"
 #include "VideoOutputStream/GstreamerFileOutput.h"
 

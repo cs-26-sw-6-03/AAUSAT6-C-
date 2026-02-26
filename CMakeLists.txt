@@ -30,7 +30,7 @@ set(SOURCES
     src/Stabilization/StubStabilizer.cpp
     src/Stabilization/Stabilizer.cpp
     src/Cropping/StubCropper.cpp
-    src/ObjectDetection/ORBDetector.cpp
+    src/FeatureDetection/ORBDetector.cpp
     src/VideoOutputStream/OpenCVWindowOutput.cpp
     src/VideoOutputStream/GstreamerFileOutput.cpp
 )
