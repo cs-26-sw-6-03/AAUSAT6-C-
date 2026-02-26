@@ -43,9 +43,8 @@ DetectionResult ORBDetector::detect(RawFrame& frame)
     vector<KeyPoint> keypointsFrame;
     Mat descriptorsFrame;
     ModelORB->detectAndCompute(gray_frame, Mat(), keypointsFrame, descriptorsFrame);
-
-    frame.keypoints = keypointsFrame;
     
+    //Cache keypoints and descriptors for use in stabilization
     frame.keypoints = keypointsFrame;
     frame.descriptors = descriptorsFrame;
     frame.features_computed = true;
