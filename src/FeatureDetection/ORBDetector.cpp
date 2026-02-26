@@ -32,7 +32,7 @@ bool ORBDetector::init(const std::string&, const std::string&,
     return true;
 }
 
-DetectionResult ORBDetector::detect(const RawFrame& frame)
+DetectionResult ORBDetector::detect(RawFrame& frame)
 {
     DetectionResult r;
     r.valid = false;
@@ -43,6 +43,12 @@ DetectionResult ORBDetector::detect(const RawFrame& frame)
     vector<KeyPoint> keypointsFrame;
     Mat descriptorsFrame;
     ModelORB->detectAndCompute(gray_frame, Mat(), keypointsFrame, descriptorsFrame);
+
+    frame.keypoints = keypointsFrame;
+    
+    frame.keypoints = keypointsFrame;
+    frame.descriptors = descriptorsFrame;
+    frame.features_computed = true;
 
     if (descriptorsFrame.empty() || keypointsObject.empty()) return r;
 

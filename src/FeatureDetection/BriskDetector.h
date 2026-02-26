@@ -38,7 +38,7 @@ public:
      * @param frame The raw input frame
      * @return DetectionResult containing center point, confidence, and validity
      */
-    DetectionResult detect(const RawFrame& frame) override;
+    DetectionResult detect(RawFrame& frame) override;
 
     /**
      * @brief Warm up the detector (optional)

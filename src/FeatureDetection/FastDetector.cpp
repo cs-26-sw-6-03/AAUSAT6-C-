@@ -13,7 +13,7 @@ bool FastDetector::init(const std::string& /*model_config*/,
     return true;
 }
 
-DetectionResult FastDetector::detect(const RawFrame& frame)
+DetectionResult FastDetector::detect(RawFrame& frame)
 {
     // convert to grayscale
     cv::Mat gray;
