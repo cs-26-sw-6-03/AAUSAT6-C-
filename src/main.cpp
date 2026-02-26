@@ -52,7 +52,9 @@ static std::string build_pipeline(const std::string& video_path,
 {
     return
         "filesrc location=" + video_path + " ! "
-        "decodebin ! "
+        "qtdemux ! "                                     // Parse MP4 container
+        "h264parse ! "                                   // Parse H.264 stream
+        "avdec_h264 ! " 
         "videorate ! "                                   // ← Frame rate conversion
         "video/x-raw,framerate=30/1 ! "                  // ← Force 30fps output
         "videoconvert ! "
@@ -92,8 +94,8 @@ int main(int argc, char* argv[])
     ResolutionConfig res_config{
         4056,  // src_width
         3040,  // src_height
-        1920,  // output_width
-        1080   // output_height
+        4056,  // src_width
+        3040, // output_height
     };
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
@@ -112,7 +114,7 @@ int main(int argc, char* argv[])
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto input    = std::make_unique<GstreamerCapture>();
-    auto detector   = std::make_unique<ORBDetector>();
+    auto detector   = std::make_unique<StubDetector>();
     auto stabilizer = std::make_unique<Stabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
     
@@ -191,8 +193,8 @@ int main(int argc, char* argv[])
 
         // 4. Crop to output resolution centred on the detected object.
         CroppedFrame cropped = cropper->crop(stabilized,
-                                             res_config.output_width,
-                                             res_config.output_height);
+                                             res_config.src_width,
+                                             res_config.src_height);
 
         // 5. Write to output stream (display window).
         if (!output->write_frame(cropped)) {
