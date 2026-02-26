@@ -60,4 +60,6 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame& frame,
     return result;
 }
 
+// std::vector<Trajectoy> cumsum (std::vector<T>)
+
 void Stabilizer::flush() {}

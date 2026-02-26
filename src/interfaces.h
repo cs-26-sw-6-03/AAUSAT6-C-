@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <cmath>
 
 // ─────────────────────────────────────────────
 // Types & Aliases
@@ -41,6 +42,38 @@ struct CroppedFrame {
     cv::Mat               data;        // cropped frame at output resolution
     cv::Rect              src_roi;     // the ROI used in the stabilized source
     std::int64_t          pts_ns = 0;
+};
+
+struct Trajectoy {
+    Trajectoy() {}
+    Trajectoy(double _x, double _y, double _a) {
+        x = _x;
+        y = _y;
+        a = _a;
+    }
+
+    double x, y, a;
+};
+
+struct TransformParam {
+    TransformParam(){}
+    TransformParam(double _dx, double _dy, double _da){
+        dx = _dx;
+        dy = _dy;
+        da = _da;
+    }
+
+    double dx, dy, da;
+
+    void getTransform(cv::Mat &T){
+        T.at<double>(0,0) = cos(da);
+        T.at<double>(0,1) = -sin(da);
+        T.at<double>(1,0) = sin(da);
+        T.at<double>(1,1) = cos(da);
+
+        T.at<double>(0,2) = dx;
+        T.at<double>(1,2) = dy;
+    }
 };
 
 // ─────────────────────────────────────────────
