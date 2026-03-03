@@ -99,10 +99,10 @@ int main(int argc, char* argv[])
     std::signal(SIGTERM, signal_handler);
     // ── Resolution Configuration ─────────────────────────────────────────────────────
     ResolutionConfig res_config{
-        1280,  // src_width (process at lower resolution for speed)
-        960,   // src_height
-        1280,  // output_width
-        960    // output_height
+        4056,  // src_width
+        3040,  // src_height
+        1920,  // output_width
+        1080   // output_height
     };
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
