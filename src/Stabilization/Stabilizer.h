@@ -19,7 +19,7 @@ public:
     void set_orb_model(cv::Ptr<cv::ORB> orb) { sharedorb_ = orb; }
 
 private:
-    static constexpr int orb_n_features = 1000;
+    static constexpr int orb_n_features = 300;  // Reduced from 1000 for faster matching
     
     cv::Ptr<cv::ORB>        sharedorb_;      // May be set by ORBDetector
     cv::Ptr<cv::ORB>        ownedorb_;       // Create our own if no shared model

@@ -5,6 +5,7 @@
 #include "FeatureDetection/BriskDetector.h"
 #include "Stabilization/StubStabilizer.h"
 #include "Cropping/StubCropper.h"
+#include "Stabilization/Stabilizer.h"
 #include "FeatureDetection/ORBDetector.h"
 #include "VideoOutputStream/OpenCVWindowOutput.h"
 #include "VideoOutputStream/GstreamerFileOutput.h"
@@ -63,11 +64,11 @@ static std::string build_pipeline(const std::string& video_path,
 
         "videorate ! "                                   // Frame rate conversion
         "video/x-raw,framerate=30/1 ! "                  // Force 30fps output
-        "videoconvert ! "
-        "videoscale ! "
-        "video/x-raw,format=BGR,"
-            "width=" + std::to_string(src_width) + ","
+        "videoscale ! "                                  // Scale DOWN here (before decode)
+        "video/x-raw,width=" + std::to_string(src_width) + ","
             "height=" + std::to_string(src_height) + " ! "
+        "videoconvert ! "
+        "video/x-raw,format=BGR ! "
         "appsink name=sink sync=false";
 }
 
@@ -98,10 +99,10 @@ int main(int argc, char* argv[])
     std::signal(SIGTERM, signal_handler);
     // ── Resolution Configuration ─────────────────────────────────────────────────────
     ResolutionConfig res_config{
-        4056,  // src_width
-        3040,  // src_height
-        1920,  // output_width
-        1080   // output_height
+        1280,  // src_width (process at lower resolution for speed)
+        960,   // src_height
+        1280,  // output_width
+        960    // output_height
     };
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
@@ -176,6 +177,7 @@ int main(int argc, char* argv[])
 
     // ── Frame loop ───────────────────────────────────────────────────────────
     std::size_t frame_count = 0;
+    constexpr int PROCESS_EVERY_N_FRAMES = 1;  // Process every frame (change to 2 for 50% speed improvement)
 
     while (!g_shutdown.load() && output->is_open()) {
 
@@ -187,8 +189,14 @@ int main(int argc, char* argv[])
         }
         RawFrame& raw = *maybe_frame;
 
-        // 2. Object detection → get center point only.
-        DetectionResult detection = detector->detect(raw);
+        // 2. Object detection → get center point only (skip on some frames for speed).
+        DetectionResult detection;
+        if (frame_count % PROCESS_EVERY_N_FRAMES == 0) {
+            detection = detector->detect(raw);
+        } else {
+            detection.valid = false;
+        }
+        
         if (detection.valid) {
             // Overlay detected centre
             cv::circle(raw.data,
