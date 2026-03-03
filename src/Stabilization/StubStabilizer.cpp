@@ -10,6 +10,7 @@ bool StubStabilizer::init(const std::string&, const std::string&)
 StabilizedFrame StubStabilizer::stabilize(const RawFrame&       frame,
                                           const DetectionResult& detection)
 {
+
     // No-op: forward the frame and centre unchanged.
     StabilizedFrame sf;
     sf.data             = frame.data;        // zero-copy (same Mat header)
