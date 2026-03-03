@@ -18,8 +18,12 @@
 
 // Raw frame coming off the GStreamer appsink — owns its data
 struct RawFrame {
-    cv::Mat               data;        // BGR image at source resolution
-    std::int64_t          pts_ns = 0;  // PTS in nanoseconds
+    cv::Mat                   data;
+    std::int64_t              pts_ns = 0;
+
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat                   descriptors;
+    bool                      features_computed = false;
 };
 
 // The normalized center point returned by the detector
@@ -127,7 +131,7 @@ public:
 
     // Run detection on a frame.
     // Returns a DetectionResult; result.valid == false if nothing found.
-    virtual DetectionResult detect(const RawFrame& frame) = 0;
+    virtual DetectionResult detect(RawFrame& frame) = 0;
 
     // Optional: warm up the model with a dummy forward pass.
     virtual void            warmup() {}

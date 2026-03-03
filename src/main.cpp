@@ -8,6 +8,7 @@
 #include "FeatureDetection/ORBDetector.h"
 #include "VideoOutputStream/OpenCVWindowOutput.h"
 #include "VideoOutputStream/GstreamerFileOutput.h"
+#include "Stabilization/EdRansacStabilizer.h"
 
 #include <gst/gst.h>
 #include <opencv2/highgui.hpp>
@@ -54,9 +55,9 @@ static std::string build_pipeline(const std::string& video_path,
     return
         "filesrc location=" + video_path + " ! "
         
-        //decodebin // OpenH264 decoder, kinda does the mix of qtdemux,h264parse,avdec_h264, but worse
+        //"decodebin ! " // OpenH264 decoder, kinda does the mix of qtdemux,h264parse,avdec_h264, but worse
         
-        "qtdemux ! "                                     // Parse MP4 container
+        "qtdemux ! "                                    // Parse MP4 container
         "h264parse ! "                                   // Parse H.264 stream
         "avdec_h264 ! "                                  // Use libav decoder (better 4K support)
 
@@ -119,8 +120,8 @@ int main(int argc, char* argv[])
 
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto input    = std::make_unique<GstreamerCapture>();
-    auto detector   = std::make_unique<FastDetector>();
-    auto stabilizer = std::make_unique<StubStabilizer>();
+    auto detector   = std::make_unique<ORBDetector>();
+    auto stabilizer = std::make_unique<EDRansacStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
     
     // Create appropriate output stream based on whether output file is specified
@@ -140,6 +141,8 @@ int main(int argc, char* argv[])
         std::cerr << "Stabilizer init failed.\n";
         return 1;
     }
+
+    stabilizer->set_orb_model(detector->ModelORB);
 
     // ── Init output stream ───────────────────────────────────────────────────
     std::string output_config;

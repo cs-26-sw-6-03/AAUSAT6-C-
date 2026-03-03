@@ -8,7 +8,7 @@ bool StubDetector::init(const std::string&, const std::string&,
     return true;
 }
 
-DetectionResult StubDetector::detect(const RawFrame& frame)
+DetectionResult StubDetector::detect(RawFrame& frame)
 {
     // Always report the geometric centre of the source frame.
     DetectionResult r;
