@@ -27,13 +27,14 @@ vtk
 hdf5
 opencv
 qt6-base
+gst-libav
 ``` 
 
 **Arch Linux**:
 
 ```bash
 sudo pacman -S gstreamer glib2 gst-plugins-base gst-plugins-good \
-               gst-plugins-bad gst-plugins-ugly cmake opencv
+               gst-plugins-bad gst-plugins-ugly gst-libav cmake opencv 
 ```
 
 **Ubuntu/Debian**:
@@ -76,6 +77,12 @@ cmake --build build
 make run ARGS='samples/test_clip.mp4 samples/area.png'
 make run ARGS='samples/test_clip.mp4 samples/area.png output.mp4'
 ``` 
+
+## Building and Running in Docker
+```bash
+make docker-build
+make docker-run VIDEO=/path/to/your/video.mp4 REF=/path/to/your/pic.jpg
+```
 
 ## VS Code IntelliSense
 
