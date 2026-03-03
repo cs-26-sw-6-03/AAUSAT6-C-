@@ -1,0 +1,53 @@
+# Docker ignore file for AAUSAT6-C++
+# Speeds up build by excluding unnecessary files
+
+# Build artifacts
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# IDE and editor files
+.idea/
+.vscode/
+.vs/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Documentation (not needed in image)
+*.md
+!README.md
+
+# Old docker files (we're creating new ones)
+old docker files/
+
+# Test data (mount as volumes instead)
+test_data/
+*.mp4
+*.avi
+*.mov
+*.jpg
+*.jpeg
+*.png
+!src/**/*.jpg
+!src/**/*.png
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile.bak
+
+# Logs
+*.log
+
