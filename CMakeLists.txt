@@ -19,20 +19,24 @@ include_directories(
     ${GST_INCLUDE_DIRS}
     ${GST_APP_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
+    ${GSTREAMER_APP_INCLUDE_DIRS}
 )
 
 # ── Source files ─────────────────────────────────────────────────────────────
 
 set(SOURCES
     src/main.cpp
+    src/FeatureDetection/FastDetector.cpp
     src/VideoInputStream/gstreamervideo.cpp
     src/FeatureDetection/StubDetector.cpp
-    src/Stabilization/StubStabilizer.cpp
     src/Stabilization/Stabilizer.cpp
+    src/FeatureDetection/BriskDetector.cpp
+    src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
     src/FeatureDetection/ORBDetector.cpp
     src/VideoOutputStream/OpenCVWindowOutput.cpp
     src/VideoOutputStream/GstreamerFileOutput.cpp
+    src/Stabilization/EdRansacStabilizer.cpp
 )
 
 # ── Main executable ──────────────────────────────────────────────────────────
@@ -43,11 +47,13 @@ target_link_libraries(video_pipeline PRIVATE
     ${GST_LIBRARIES}
     ${GST_APP_LIBRARIES}
     ${OpenCV_LIBS}
+    ${GSTREAMER_APP_LIBRARIES}
 )
 
 target_compile_options(video_pipeline PRIVATE
     ${GST_CFLAGS_OTHER}
     -Wall -Wextra -Wpedantic
+    -O3
 )
 
 # ── Optional: Install target ─────────────────────────────────────────────────

@@ -1,12 +1,14 @@
 #include "interfaces.h"
+#include "FeatureDetection/FastDetector.h"
 #include "VideoInputStream/gstreamervideo.h"
 #include "FeatureDetection/StubDetector.h"
+#include "FeatureDetection/BriskDetector.h"
 #include "Stabilization/StubStabilizer.h"
-#include "Stabilization/Stabilizer.h"
 #include "Cropping/StubCropper.h"
 #include "FeatureDetection/ORBDetector.h"
 #include "VideoOutputStream/OpenCVWindowOutput.h"
 #include "VideoOutputStream/GstreamerFileOutput.h"
+#include "Stabilization/EdRansacStabilizer.h"
 
 #include <gst/gst.h>
 #include <opencv2/highgui.hpp>
@@ -52,9 +54,15 @@ static std::string build_pipeline(const std::string& video_path,
 {
     return
         "filesrc location=" + video_path + " ! "
-        "decodebin ! "
-        "videorate ! "                                   // ← Frame rate conversion
-        "video/x-raw,framerate=30/1 ! "                  // ← Force 30fps output
+        
+        //"decodebin ! " // OpenH264 decoder, kinda does the mix of qtdemux,h264parse,avdec_h264, but worse
+        
+        "qtdemux ! "                                    // Parse MP4 container
+        "h264parse ! "                                   // Parse H.264 stream
+        "avdec_h264 ! "                                  // Use libav decoder (better 4K support)
+
+        "videorate ! "                                   // Frame rate conversion
+        "video/x-raw,framerate=30/1 ! "                  // Force 30fps output
         "videoconvert ! "
         "videoscale ! "
         "video/x-raw,format=BGR,"
@@ -98,10 +106,10 @@ int main(int argc, char* argv[])
     // ── Configuration ────────────────────────────────────────────────────────
     const std::string video_path      = (argc > 1)
                                           ? argv[1]
-                                          : "/home/slessing/Projects/AAUSAT6-C-/Untitled.mp4";
+                                          : "/home/tobia/GoogleEarthTest.mp4";
     const std::string reference_image = (argc > 2)
                                           ? argv[2]
-                                          : "/home/slessing/Projects/AAUSAT6-C-/reference_object.jpg";
+                                          : "/home/tobia/reference_object.jpg";
     const std::string output_file     = (argc > 3) ? argv[3] : "";  // Optional output file
 
     std::cout << "Video source  : " << video_path      << "\n"
@@ -113,7 +121,7 @@ int main(int argc, char* argv[])
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto input    = std::make_unique<GstreamerCapture>();
     auto detector   = std::make_unique<ORBDetector>();
-    auto stabilizer = std::make_unique<Stabilizer>();
+    auto stabilizer = std::make_unique<EDRansacStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
     
     // Create appropriate output stream based on whether output file is specified
@@ -133,6 +141,8 @@ int main(int argc, char* argv[])
         std::cerr << "Stabilizer init failed.\n";
         return 1;
     }
+
+    stabilizer->set_orb_model(detector->ModelORB);
 
     // ── Init output stream ───────────────────────────────────────────────────
     std::string output_config;

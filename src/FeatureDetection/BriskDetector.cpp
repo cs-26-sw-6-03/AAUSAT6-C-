@@ -49,7 +49,7 @@ bool BriskDetector::init(const std::string& /*model_config*/,
     return true;
 }
 
-DetectionResult BriskDetector::detect(const RawFrame& frame)
+DetectionResult BriskDetector::detect(RawFrame& frame)
 {
     DetectionResult result;
     result.valid = false;

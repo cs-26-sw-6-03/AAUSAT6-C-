@@ -14,5 +14,5 @@ public:
               const std::string& model_weights,
               const std::string& reference_image) override;
 
-    DetectionResult detect(const RawFrame& frame)override;
+    DetectionResult detect(RawFrame& frame)override;
 };

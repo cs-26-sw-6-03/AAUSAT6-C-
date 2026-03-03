@@ -7,7 +7,11 @@ bool ORBDetector::init(const std::string&, const std::string&,
                        const std::string& reference_image)
 {
     std::cout << "[ORBDetector] init()\n";
-    ModelORB = ORB::create(500);
+    // nfeatures    - 400
+    // scale factor (ratio the image is divided by between scale in the pyramid of gaussians) - default: 1.2f
+    // nlevels (n of pyramid levels) - default 8
+    //ModelORB = ORB::create(400, 1.2f, 4);
+    ModelORB = ORB::create(400);
     reference_image_path = reference_image;
 
     // Load and compute reference descriptors ONCE here, not every frame
@@ -28,7 +32,7 @@ bool ORBDetector::init(const std::string&, const std::string&,
     return true;
 }
 
-DetectionResult ORBDetector::detect(const RawFrame& frame)
+DetectionResult ORBDetector::detect(RawFrame& frame)
 {
     DetectionResult r;
     r.valid = false;
@@ -39,6 +43,11 @@ DetectionResult ORBDetector::detect(const RawFrame& frame)
     vector<KeyPoint> keypointsFrame;
     Mat descriptorsFrame;
     ModelORB->detectAndCompute(gray_frame, Mat(), keypointsFrame, descriptorsFrame);
+    
+    //Cache keypoints and descriptors for use in stabilization
+    frame.keypoints = keypointsFrame;
+    frame.descriptors = descriptorsFrame;
+    frame.features_computed = true;
 
     if (descriptorsFrame.empty() || keypointsObject.empty()) return r;
 

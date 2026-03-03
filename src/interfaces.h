@@ -11,7 +11,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <cmath>
 
 // ─────────────────────────────────────────────
 // Types & Aliases
@@ -47,7 +46,6 @@ struct CroppedFrame {
     cv::Rect              src_roi;     // the ROI used in the stabilized source
     std::int64_t          pts_ns = 0;
 };
-  
 
 // ─────────────────────────────────────────────
 // I. Video Input Stream Interface
@@ -133,7 +131,7 @@ public:
 
     // Run detection on a frame.
     // Returns a DetectionResult; result.valid == false if nothing found.
-    virtual DetectionResult detect(const RawFrame& frame) = 0;
+    virtual DetectionResult detect(RawFrame& frame) = 0;
 
     // Optional: warm up the model with a dummy forward pass.
     virtual void            warmup() {}
