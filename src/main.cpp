@@ -191,8 +191,8 @@ int main(int argc, char* argv[])
 
         // 4. Crop to output resolution centred on the detected object.
         CroppedFrame cropped = cropper->crop(stabilized,
-                                             res_config.src_width,
-                                             res_config.src_height);
+                                             res_config.output_width,
+                                             res_config.output_height);
 
         // 5. Write to output stream (display window).
         if (!output->write_frame(cropped)) {

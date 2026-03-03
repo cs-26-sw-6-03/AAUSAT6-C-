@@ -14,10 +14,17 @@ public:
                               const DetectionResult &detection) override;
 
     void flush() override;
-
-    cv::Mat fixBorder(const cv::Mat &frame);
+    
+    // Allow setting a shared ORB model (e.g., from ORBDetector)
+    void set_orb_model(cv::Ptr<cv::ORB> orb) { sharedorb_ = orb; }
 
 private:
+    static constexpr int orb_n_features = 1000;
+    
+    cv::Ptr<cv::ORB>        sharedorb_;      // May be set by ORBDetector
+    cv::Ptr<cv::ORB>        ownedorb_;       // Create our own if no shared model
+    cv::Ptr<cv::BFMatcher>  matcher_;
+
     cv::Mat prevGray;
     cv::Mat smoothedTransform = cv::Mat::eye(2, 3, CV_64F);
     double alpha = 0.9; // If we need better stabilization then lower this number. (when lowering the number this latentcy is getting worse)
@@ -26,11 +33,16 @@ private:
     std::vector<cv::KeyPoint> prev_kps_;
     cv::Mat prev_desc_;
 
-    cv::Ptr<cv::ORB> orb_detector_;  // ORB detector for keypoint detection
-
     double smoothed_dx = 0.0;
     double smoothed_dy = 0.0;
     double smoothed_da = 0.0;
+    
+    size_t frame_idx_ = 0;
+
+    // Get the active ORB detector (shared or owned)
+    cv::Ptr<cv::ORB> active_orb() const {
+        return sharedorb_ ? sharedorb_ : ownedorb_;
+    }
 
     void get_features(RawFrame&                  frame,
                       const cv::Mat&             gray,

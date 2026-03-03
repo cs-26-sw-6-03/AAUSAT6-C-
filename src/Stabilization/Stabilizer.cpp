@@ -5,26 +5,43 @@
 
 bool Stabilizer::init(const std::string &, const std::string &)
 {
-    std::cout << "[Stabilizer] init() — initializing ORB feature detector.\n";
-    // Create ORB detector with 500 keypoints
-    orb_detector_ = cv::ORB::create(500);
+    if (!sharedorb_)
+    {
+        ownedorb_ = cv::ORB::create(orb_n_features);
+        std::cout << "[Stabilizer] No shared ORB model — created own ("
+                  << orb_n_features << " features).\n";
+    }
+    else
+    {
+        std::cout << "[Stabilizer] Using shared ORB model from ORBDetector.\n";
+    }
+
+    matcher_ = cv::BFMatcher::create(cv::NORM_HAMMING, false);
+
+    frame_idx_ = 0;
+    prev_gray_.release();
+    prev_kps_.clear();
+    prev_desc_.release();
+
+    std::cout << "[Stabilizer] Initialized with alpha=" << alpha << ".\n";
     return true;
 }
 
-void Stabilizer::get_features(RawFrame&                  frame,
-                                       const cv::Mat&             gray,
-                                       std::vector<cv::KeyPoint>& kps,
-                                       cv::Mat&                   desc) const
+void Stabilizer::get_features(RawFrame &frame,
+                              const cv::Mat &gray,
+                              std::vector<cv::KeyPoint> &kps,
+                              cv::Mat &desc) const
 {
-    if (frame.features_computed) {
+    if (frame.features_computed)
+    {
         // ORBDetector already ran on this frame — reuse its results
         kps  = frame.keypoints;
         desc = frame.descriptors;
         return;
     }
 
-    // Compute features using ORB detector
-    orb_detector_->detectAndCompute(gray, cv::noArray(), kps, desc);
+    // Compute features ourselves using whichever ORB model is active
+    active_orb()->detectAndCompute(gray, cv::noArray(), kps, desc);
 
     // Cache so that any later pipeline stage can also reuse them
     frame.keypoints          = kps;
@@ -35,7 +52,9 @@ void Stabilizer::get_features(RawFrame&                  frame,
 StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
                                       const DetectionResult &)
 {
-
+    // Cast away const to cache features on this frame
+    RawFrame& mutable_frame = const_cast<RawFrame&>(frame);
+    
     cv::Mat frameMat = frame.data;
 
     cv::Mat gray;
@@ -43,34 +62,44 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
 
     if (prevGray.empty())
     {
-        prevGray = gray.clone();
+        std::vector<cv::KeyPoint> curr_kps;
+        cv::Mat curr_desc;
+        get_features(mutable_frame, gray, curr_kps, curr_desc);
+        
+        prev_gray_ = gray.clone();
+        prev_kps_  = curr_kps;
+        prev_desc_ = curr_desc;
+        prevGray   = gray.clone();
+        
         StabilizedFrame result;
         result.data = frameMat;
+        ++frame_idx_;
         return result;
     }
 
-    // Detect keypoints and descriptors in both frames using ORB
-    std::vector<cv::KeyPoint> prevKps, currKps;
-    cv::Mat prevDesc, currDesc;
-    
-    orb_detector_->detectAndCompute(prevGray, cv::noArray(), prevKps, prevDesc);
-    orb_detector_->detectAndCompute(gray, cv::noArray(), currKps, currDesc);
+    std::vector<cv::KeyPoint> curr_kps;
+    cv::Mat curr_desc;
+    get_features(mutable_frame, gray, curr_kps, curr_desc);
 
-    if (prevDesc.empty() || currDesc.empty())
+    if (prev_desc_.empty() || curr_desc.empty())
     {
-        prevGray = gray.clone();
+        prev_gray_ = gray.clone();
+        prev_kps_  = curr_kps;
+        prev_desc_ = curr_desc;
+        prevGray   = gray.clone();
+        
         StabilizedFrame result;
         result.data = frameMat;
+        ++frame_idx_;
         return result;
     }
 
-    cv::BFMatcher matcher(cv::NORM_HAMMING, true);
     std::vector<cv::DMatch> matches;
-    matcher.match(prevDesc, currDesc, matches);
+    matcher_->match(prev_desc_, curr_desc, matches);
 
     std::vector<cv::DMatch> goodMatches;
     const float DISTANCE_THRESHOLD = 60.f;
-    for (const auto& match : matches)
+    for (const auto &match : matches)
     {
         if (match.distance < DISTANCE_THRESHOLD)
             goodMatches.push_back(match);
@@ -78,34 +107,43 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
 
     if (goodMatches.size() < 4)
     {
-        prevGray = gray.clone();
+        prev_gray_ = gray.clone();
+        prev_kps_  = curr_kps;
+        prev_desc_ = curr_desc;
+        prevGray   = gray.clone();
+        
         StabilizedFrame result;
         result.data = frameMat;
+        ++frame_idx_;
         return result;
     }
 
-    // Extract matched points
     std::vector<cv::Point2f> prevPts, currPts;
-    for (const auto& match : goodMatches)
+    for (const auto &match : goodMatches)
     {
-        prevPts.push_back(prevKps[match.queryIdx].pt);
-        currPts.push_back(currKps[match.trainIdx].pt);
+        prevPts.push_back(prev_kps_[match.queryIdx].pt);
+        currPts.push_back(curr_kps[match.trainIdx].pt);
     }
 
     cv::Mat T = cv::estimateAffinePartial2D(prevPts, currPts); // denne extractor et 2 x 3 matrix.
 
     if (T.empty())
     {
-        prevGray = gray.clone();
+        prev_gray_ = gray.clone();
+        prev_kps_  = curr_kps;
+        prev_desc_ = curr_desc;
+        prevGray   = gray.clone();
+        
         StabilizedFrame result;
         result.data = frameMat;
+        ++frame_idx_;
         return result;
     }
     // her kigger vi på Horizontal og Vertical i vores metrix
-    double dx = T.at<double>(0,2); 
-    double dy = T.at<double>(1,2);
-    double da = std::atan2(T.at<double>(1,0),
-                            T.at<double>(0,0));
+    double dx = T.at<double>(0, 2);
+    double dy = T.at<double>(1, 2);
+    double da = std::atan2(T.at<double>(1, 0),
+                           T.at<double>(0, 0));
 
     smoothed_dx = alpha * smoothed_dx + (1.0 - alpha) * dx;
     smoothed_dy = alpha * smoothed_dy + (1.0 - alpha) * dy;
@@ -113,36 +151,34 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
 
     cv::Mat smoothedT = cv::Mat::eye(2, 3, CV_64F);
 
-    smoothedT.at<double>(0,0) = std::cos(smoothed_da);
-    smoothedT.at<double>(0,1) = -std::sin(smoothed_da);
-    smoothedT.at<double>(1,0) = std::sin(smoothed_da);
-    smoothedT.at<double>(1,1) = std::cos(smoothed_da);
+    smoothedT.at<double>(0, 0) = std::cos(smoothed_da);
+    smoothedT.at<double>(0, 1) = -std::sin(smoothed_da);
+    smoothedT.at<double>(1, 0) = std::sin(smoothed_da);
+    smoothedT.at<double>(1, 1) = std::cos(smoothed_da);
 
-    smoothedT.at<double>(0,2) = smoothed_dx;
-    smoothedT.at<double>(1,2) = smoothed_dy;
-
-
+    smoothedT.at<double>(0, 2) = smoothed_dx;
+    smoothedT.at<double>(1, 2) = smoothed_dy;
 
     cv::Mat stabilized;
     cv::warpAffine(frameMat, stabilized, smoothedT, frameMat.size());
 
-    prevGray = gray.clone();
+    prev_gray_ = gray.clone();
+    prev_kps_  = curr_kps;
+    prev_desc_ = curr_desc;
+    prevGray   = gray.clone();
+    
+    if (frame_idx_ % 30 == 0) {
+        std::cout << "[Stabilizer] Frame " << frame_idx_
+                  << " | matches: " << goodMatches.size()
+                  << " | cache hit: " << (frame.features_computed ? "yes" : "no")
+                  << "\n";
+    }
+    
+    ++frame_idx_;
 
     StabilizedFrame result;
     result.data = stabilized;
     return result;
-}
-
-cv::Mat Stabilizer::fixBorder(const cv::Mat& frame){
-    double scale = 1.04; // Ved at ændre dette kan du ændre zoom - 1.04 = 4% zoom
-
-    cv::Point2f center(frame.cols / 2.0f, frame.rows / 2.0f);
-    cv::Mat T = cv::getRotationMatrix2D(center, 0, scale);
-
-    cv::Mat scaled;
-    cv::warpAffine(frame, scaled, T, frame.size());
-
-    return scaled;
 }
 
 void Stabilizer::flush() {}
