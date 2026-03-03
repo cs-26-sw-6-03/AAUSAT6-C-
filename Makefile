@@ -60,5 +60,5 @@ docker-run: # Run pipeline in Docker
 		/app/data/$$(basename $(VIDEO)) \
 		/app/ref/$$(basename $(REF)) \
 		$(OUTPUT)
-	@echo "✅ Done! Output: $(OUTPUT)"
+	@echo "Done! Output: $(OUTPUT)"
 
