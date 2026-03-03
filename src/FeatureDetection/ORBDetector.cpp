@@ -40,21 +40,17 @@ DetectionResult ORBDetector::detect(RawFrame& frame)
     Mat gray_frame;
     cvtColor(frame.data, gray_frame, COLOR_BGR2GRAY);
 
-    vector<KeyPoint> keypointsFrame;
-    Mat descriptorsFrame;
-    ModelORB->detectAndCompute(gray_frame, Mat(), keypointsFrame, descriptorsFrame);
+    ModelORB->detectAndCompute(gray_frame, Mat(), frame.keypoints, frame.descriptors);
     
     //Cache keypoints and descriptors for use in stabilization
-    frame.keypoints = keypointsFrame;
-    frame.descriptors = descriptorsFrame;
     frame.features_computed = true;
 
-    if (descriptorsFrame.empty() || keypointsObject.empty()) return r;
+    if (frame.descriptors.empty() || keypointsObject.empty()) return r;
 
     // Match frame descriptors against the pre-computed reference descriptors
     BFMatcher bruteforceMatcher(cv::NORM_HAMMING, true);
     vector<DMatch> matches;
-    bruteforceMatcher.match(descriptorsFrame, descriptorsObject, matches);
+    bruteforceMatcher.match(frame.descriptors, descriptorsObject, matches);
 
     if (matches.empty()) return r;
 
@@ -75,7 +71,7 @@ DetectionResult ORBDetector::detect(RawFrame& frame)
     // A valid detection should have keypoints consistent with a planar transform.
     vector<Point2f> ptsFrame, ptsObject;
     for (const auto& m : goodMatches) {
-        ptsFrame.push_back(keypointsFrame[m.queryIdx].pt);
+        ptsFrame.push_back(frame.keypoints[m.queryIdx].pt);
         ptsObject.push_back(keypointsObject[m.trainIdx].pt);
     }
 
