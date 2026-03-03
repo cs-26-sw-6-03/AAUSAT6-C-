@@ -78,6 +78,12 @@ make run ARGS='samples/test_clip.mp4 samples/area.png'
 make run ARGS='samples/test_clip.mp4 samples/area.png output.mp4'
 ``` 
 
+## Building and Running in Docker
+```bash
+make docker-build
+make docker-run VIDEO=/path/to/your/video.mp4 REF=/path/to/your/pic.jpg
+```
+
 ## VS Code IntelliSense
 
 For intellisense via VS Code, these paths should be included:
