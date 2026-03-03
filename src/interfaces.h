@@ -19,8 +19,12 @@
 
 // Raw frame coming off the GStreamer appsink — owns its data
 struct RawFrame {
-    cv::Mat               data;        // BGR image at source resolution
-    std::int64_t          pts_ns = 0;  // PTS in nanoseconds
+    cv::Mat                   data;
+    std::int64_t              pts_ns = 0;
+
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Mat                   descriptors;
+    bool                      features_computed = false;
 };
 
 // The normalized center point returned by the detector

@@ -1,11 +1,35 @@
 #include "Stabilization/Stabilizer.h"
 #include <opencv2/calib3d.hpp>
+#include <opencv2/features2d.hpp>
 #include <iostream>
 
 bool Stabilizer::init(const std::string &, const std::string &)
 {
-    std::cout << "[Stabilizer] init() — pass-through mode.\n";
+    std::cout << "[Stabilizer] init() — initializing ORB feature detector.\n";
+    // Create ORB detector with 500 keypoints
+    orb_detector_ = cv::ORB::create(500);
     return true;
+}
+
+void Stabilizer::get_features(RawFrame&                  frame,
+                                       const cv::Mat&             gray,
+                                       std::vector<cv::KeyPoint>& kps,
+                                       cv::Mat&                   desc) const
+{
+    if (frame.features_computed) {
+        // ORBDetector already ran on this frame — reuse its results
+        kps  = frame.keypoints;
+        desc = frame.descriptors;
+        return;
+    }
+
+    // Compute features using ORB detector
+    orb_detector_->detectAndCompute(gray, cv::noArray(), kps, desc);
+
+    // Cache so that any later pipeline stage can also reuse them
+    frame.keypoints          = kps;
+    frame.descriptors        = desc;
+    frame.features_computed  = true;
 }
 
 StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
@@ -25,26 +49,50 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
         return result;
     }
 
-    std::vector<cv::Point2f> prevPts, currPts;
-    cv::goodFeaturesToTrack(prevGray, prevPts, 200, 0.01, 30);
+    // Detect keypoints and descriptors in both frames using ORB
+    std::vector<cv::KeyPoint> prevKps, currKps;
+    cv::Mat prevDesc, currDesc;
+    
+    orb_detector_->detectAndCompute(prevGray, cv::noArray(), prevKps, prevDesc);
+    orb_detector_->detectAndCompute(gray, cv::noArray(), currKps, currDesc);
 
-    std::vector<uchar> status;
-    std::vector<float> err;
-
-    cv::calcOpticalFlowPyrLK(prevGray, gray, prevPts, currPts, status, err);
-
-    std::vector<cv::Point2f> prevFiltered, currFiltered;
-
-    for (size_t i = 0; i < status.size(); i++)
+    if (prevDesc.empty() || currDesc.empty())
     {
-        if (status[i])
-        {
-            prevFiltered.push_back(prevPts[i]);
-            currFiltered.push_back(currPts[i]);
-        }
+        prevGray = gray.clone();
+        StabilizedFrame result;
+        result.data = frameMat;
+        return result;
     }
 
-    cv::Mat T = cv::estimateAffinePartial2D(prevFiltered, currFiltered); // denne extractor et 2 x 3 matrix.
+    cv::BFMatcher matcher(cv::NORM_HAMMING, true);
+    std::vector<cv::DMatch> matches;
+    matcher.match(prevDesc, currDesc, matches);
+
+    std::vector<cv::DMatch> goodMatches;
+    const float DISTANCE_THRESHOLD = 60.f;
+    for (const auto& match : matches)
+    {
+        if (match.distance < DISTANCE_THRESHOLD)
+            goodMatches.push_back(match);
+    }
+
+    if (goodMatches.size() < 4)
+    {
+        prevGray = gray.clone();
+        StabilizedFrame result;
+        result.data = frameMat;
+        return result;
+    }
+
+    // Extract matched points
+    std::vector<cv::Point2f> prevPts, currPts;
+    for (const auto& match : goodMatches)
+    {
+        prevPts.push_back(prevKps[match.queryIdx].pt);
+        currPts.push_back(currKps[match.trainIdx].pt);
+    }
+
+    cv::Mat T = cv::estimateAffinePartial2D(prevPts, currPts); // denne extractor et 2 x 3 matrix.
 
     if (T.empty())
     {
