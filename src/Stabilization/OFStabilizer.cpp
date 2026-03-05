@@ -66,7 +66,7 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
     cv::Mat gray;
     cv::cvtColor(frameMat, gray, cv::COLOR_BGR2GRAY);
 
-    if (prevGray.empty())
+    if (prevGray.empty() || prev_pts_.empty())
     {
         std::vector<cv::KeyPoint> curr_kps;
         cv::Mat curr_desc;
@@ -86,16 +86,6 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
     std::vector<cv::Point2f> curr_pts;
     std::vector<uchar> status;
     std::vector<float> err;
-
-    if (prev_pts_.size() < 10)
-    {
-        prev_pts_ = curr_pts;
-        prevGray = gray.clone();
-
-        StabilizedFrame result;
-        result.data = frameMat;
-        return result;
-    }
 
     cv::calcOpticalFlowPyrLK(
         prev_gray_,
@@ -150,7 +140,7 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         ++frame_idx_;
         return result;
     }
-    // her kigger vi på Horizontal og Vertical i vores metrix
+    // her kigger vi på Horizontal og Vertical i vores matrix
     double dx = T.at<double>(0, 2);
     double dy = T.at<double>(1, 2);
     double da = std::atan2(T.at<double>(1, 0),
