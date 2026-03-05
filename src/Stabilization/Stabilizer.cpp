@@ -83,65 +83,60 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
         return result;
     }
 
-    std::vector<cv::KeyPoint> curr_kps;
-    cv::Mat curr_desc;
-    get_features(mutable_frame, gray, curr_kps, curr_desc);
+    std::vector<cv::Point2f> curr_pts;
+    std::vector<uchar> status;
+    std::vector<float> err;
 
-    if (prev_desc_.empty() || curr_desc.empty())
+    cv::calcOpticalFlowPyrLK(
+        prev_gray_,
+        gray,
+        prev_pts_,
+        curr_pts,
+        status,
+        err);
+
+    std::vector<cv::Point2f> prevFiltered;
+    std::vector<cv::Point2f> currFiltered;
+
+    for (size_t i = 0; i < status.size(); i++)
     {
+        if (status[i])
+        {
+            prevFiltered.push_back(prev_pts_[i]);
+            currFiltered.push_back(curr_pts[i]);
+        }
+    }
+
+    if (prevFiltered.size() < 10)
+    {
+        std::vector<cv::KeyPoint> kps;
+        cv::Mat desc;
+
+        get_features(mutable_frame, gray, kps, desc);
+
+        prev_pts_.clear();
+        for (const auto &kp : kps)
+            prev_pts_.push_back(kp.pt);
+
         prev_gray_ = gray.clone();
-        prev_kps_ = curr_kps;
-        prev_desc_ = curr_desc;
-        prevGray = gray.clone();
 
         StabilizedFrame result;
         result.data = frameMat;
+
         ++frame_idx_;
         return result;
     }
 
-    std::vector<cv::DMatch> matches;
-    matcher_->match(prev_desc_, curr_desc, matches);
-
-    std::vector<cv::DMatch> goodMatches;
-    const float DISTANCE_THRESHOLD = 60.f;
-    for (const auto &match : matches)
-    {
-        if (match.distance < DISTANCE_THRESHOLD)
-            goodMatches.push_back(match);
-    }
-
-    if (goodMatches.size() < 4)
-    {
-        prev_gray_ = gray.clone();
-        prev_kps_ = curr_kps;
-        prev_desc_ = curr_desc;
-        prevGray = gray.clone();
-
-        StabilizedFrame result;
-        result.data = frameMat;
-        ++frame_idx_;
-        return result;
-    }
-
-    std::vector<cv::Point2f> prevPts, currPts;
-    for (const auto &match : goodMatches)
-    {
-        prevPts.push_back(prev_kps_[match.queryIdx].pt);
-        currPts.push_back(curr_kps[match.trainIdx].pt);
-    }
-
-    cv::Mat T = cv::estimateAffinePartial2D(prevPts, currPts); // denne extractor et 2 x 3 matrix.
+    cv::Mat T = cv::estimateAffinePartial2D(prevFiltered, currFiltered); // denne extractor et 2 x 3 matrix.
 
     if (T.empty())
     {
+        prev_pts_ = currFiltered;
         prev_gray_ = gray.clone();
-        prev_kps_ = curr_kps;
-        prev_desc_ = curr_desc;
-        prevGray = gray.clone();
 
         StabilizedFrame result;
         result.data = frameMat;
+
         ++frame_idx_;
         return result;
     }
@@ -172,37 +167,45 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
     cv::Mat warp_3x3 = cv::Mat::eye(3, 3, CV_64F);
     smoothedT.copyTo(warp_3x3.rowRange(0, 2));
 
-    // Transform suggested center through the warp
     if (detection.valid)
     {
         std::vector<cv::Point2f> center_in = {detection.center};
         std::vector<cv::Point2f> center_out;
-        cv::perspectiveTransform(center_in, center_out, warp_3x3);
 
-        float cx = std::max(0.f, std::min(center_out[0].x, (float)(frame.data.cols - 1)));
-        float cy = std::max(0.f, std::min(center_out[0].y, (float)(frame.data.rows - 1)));
+        cv::perspectiveTransform(
+            center_in,
+            center_out,
+            warp_3x3);
+
+        float cx = std::max(
+            0.f,
+            std::min(center_out[0].x,
+                     (float)(frame.data.cols - 1)));
+
+        float cy = std::max(
+            0.f,
+            std::min(center_out[0].y,
+                     (float)(frame.data.rows - 1)));
+
         out.suggested_center = {cx, cy};
     }
 
+    prev_pts_ = currFiltered;
     prev_gray_ = gray.clone();
-    prev_kps_ = curr_kps;
-    prev_desc_ = curr_desc;
-    prevGray = gray.clone();
 
     if (frame_idx_ % 30 == 0)
     {
-        std::cout << "[Stabilizer] Frame " << frame_idx_
-                  << " | matches: " << goodMatches.size()
-                  << " | cache hit: " << (frame.features_computed ? "yes" : "no")
+        std::cout << "[Stabilizer] Frame "
+                  << frame_idx_
+                  << " | tracked points: "
+                  << prev_pts_.size()
                   << "\n";
     }
 
     ++frame_idx_;
 
-    StabilizedFrame result;
-    result.data = stabilized;
-    result.pts_ns = frame.pts_ns;
-    return result;
+    out.data = stabilized;
+    return out;
 }
 
 void Stabilizer::flush() {}

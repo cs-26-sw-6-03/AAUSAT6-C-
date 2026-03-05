@@ -32,6 +32,7 @@ private:
     cv::Mat prev_gray_;
     std::vector<cv::KeyPoint> prev_kps_;
     cv::Mat prev_desc_;
+    std::vector<cv::Point2f> prev_pts_;
 
     double smoothed_dx = 0.0;
     double smoothed_dy = 0.0;
