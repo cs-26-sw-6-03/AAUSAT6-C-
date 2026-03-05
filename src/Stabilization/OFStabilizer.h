@@ -5,7 +5,7 @@
 #include <deque>
 
 
-class Stabilizer : public IVideoStabilizer
+class OFStabilizer : public IVideoStabilizer
 {
 public:
     bool init(const std::string &, const std::string &) override;
@@ -32,10 +32,19 @@ private:
     cv::Mat prev_gray_;
     std::vector<cv::KeyPoint> prev_kps_;
     cv::Mat prev_desc_;
+    std::vector<cv::Point2f> prev_pts_;
 
     double smoothed_dx = 0.0;
     double smoothed_dy = 0.0;
     double smoothed_da = 0.0;
+
+    double traj_dx;
+    double traj_dy;
+    double traj_da; 
+
+    double diff_dx; 
+    double diff_dy; 
+    double diff_da;
     
     size_t frame_idx_ = 0;
 

@@ -5,7 +5,7 @@
 #include "FeatureDetection/BriskDetector.h"
 #include "Stabilization/StubStabilizer.h"
 #include "Cropping/StubCropper.h"
-#include "Stabilization/Stabilizer.h"
+#include "Stabilization/OFStabilizer.h"
 #include "FeatureDetection/ORBDetector.h"
 #include "VideoOutputStream/OpenCVWindowOutput.h"
 #include "VideoOutputStream/GstreamerFileOutput.h"
@@ -122,7 +122,7 @@ int main(int argc, char* argv[])
     // ── Instantiate pipeline stages ──────────────────────────────────────────
     auto input    = std::make_unique<GstreamerCapture>();
     auto detector   = std::make_unique<ORBDetector>();
-    auto stabilizer = std::make_unique<EDRansacStabilizer>();
+    auto stabilizer = std::make_unique<OFStabilizer>();
     auto cropper    = std::make_unique<StubCropper>();
     
     // Create appropriate output stream based on whether output file is specified

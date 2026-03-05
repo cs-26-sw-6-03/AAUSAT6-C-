@@ -1,9 +1,9 @@
-#include "Stabilization/Stabilizer.h"
+#include "Stabilization/OFStabilizer.h"
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
 #include <iostream>
 
-bool Stabilizer::init(const std::string &, const std::string &)
+bool OFStabilizer::init(const std::string &, const std::string &)
 {
     if (!sharedorb_)
     {
@@ -27,10 +27,10 @@ bool Stabilizer::init(const std::string &, const std::string &)
     return true;
 }
 
-void Stabilizer::get_features(RawFrame &frame,
-                              const cv::Mat &gray,
-                              std::vector<cv::KeyPoint> &kps,
-                              cv::Mat &desc) const
+void OFStabilizer::get_features(RawFrame &frame,
+                                const cv::Mat &gray,
+                                std::vector<cv::KeyPoint> &kps,
+                                cv::Mat &desc) const
 {
     if (frame.features_computed)
     {
@@ -49,8 +49,8 @@ void Stabilizer::get_features(RawFrame &frame,
     frame.features_computed = true;
 }
 
-StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
-                                      const DetectionResult &detection)
+StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
+                                        const DetectionResult &detection)
 {
     // Cast away const to cache features on this frame
     RawFrame &mutable_frame = const_cast<RawFrame &>(frame);
@@ -66,7 +66,7 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
     cv::Mat gray;
     cv::cvtColor(frameMat, gray, cv::COLOR_BGR2GRAY);
 
-    if (prevGray.empty())
+    if (prevGray.empty() || prev_pts_.empty())
     {
         std::vector<cv::KeyPoint> curr_kps;
         cv::Mat curr_desc;
@@ -83,126 +83,138 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
         return result;
     }
 
-    std::vector<cv::KeyPoint> curr_kps;
-    cv::Mat curr_desc;
-    get_features(mutable_frame, gray, curr_kps, curr_desc);
+    std::vector<cv::Point2f> curr_pts;
+    std::vector<uchar> status;
+    std::vector<float> err;
 
-    if (prev_desc_.empty() || curr_desc.empty())
+    cv::calcOpticalFlowPyrLK(
+        prev_gray_,
+        gray,
+        prev_pts_,
+        curr_pts,
+        status,
+        err);
+
+    std::vector<cv::Point2f> prevFiltered;
+    std::vector<cv::Point2f> currFiltered;
+
+    for (size_t i = 0; i < status.size(); i++)
     {
+        if (status[i])
+        {
+            prevFiltered.push_back(prev_pts_[i]);
+            currFiltered.push_back(curr_pts[i]);
+        }
+    }
+
+    if (prevFiltered.size() < 10)
+    {
+        std::vector<cv::KeyPoint> kps;
+        cv::Mat desc;
+
+        get_features(mutable_frame, gray, kps, desc);
+
+        prev_pts_.clear();
+        for (const auto &kp : kps)
+            prev_pts_.push_back(kp.pt);
+
         prev_gray_ = gray.clone();
-        prev_kps_ = curr_kps;
-        prev_desc_ = curr_desc;
-        prevGray = gray.clone();
 
         StabilizedFrame result;
         result.data = frameMat;
+
         ++frame_idx_;
         return result;
     }
 
-    std::vector<cv::DMatch> matches;
-    matcher_->match(prev_desc_, curr_desc, matches);
-
-    std::vector<cv::DMatch> goodMatches;
-    const float DISTANCE_THRESHOLD = 60.f;
-    for (const auto &match : matches)
-    {
-        if (match.distance < DISTANCE_THRESHOLD)
-            goodMatches.push_back(match);
-    }
-
-    if (goodMatches.size() < 4)
-    {
-        prev_gray_ = gray.clone();
-        prev_kps_ = curr_kps;
-        prev_desc_ = curr_desc;
-        prevGray = gray.clone();
-
-        StabilizedFrame result;
-        result.data = frameMat;
-        ++frame_idx_;
-        return result;
-    }
-
-    std::vector<cv::Point2f> prevPts, currPts;
-    for (const auto &match : goodMatches)
-    {
-        prevPts.push_back(prev_kps_[match.queryIdx].pt);
-        currPts.push_back(curr_kps[match.trainIdx].pt);
-    }
-
-    cv::Mat T = cv::estimateAffinePartial2D(prevPts, currPts); // denne extractor et 2 x 3 matrix.
+    cv::Mat T = cv::estimateAffinePartial2D(prevFiltered, currFiltered); // denne extractor et 2 x 3 matrix.
 
     if (T.empty())
     {
+        prev_pts_ = currFiltered;
         prev_gray_ = gray.clone();
-        prev_kps_ = curr_kps;
-        prev_desc_ = curr_desc;
-        prevGray = gray.clone();
 
         StabilizedFrame result;
         result.data = frameMat;
+
         ++frame_idx_;
         return result;
     }
-    // her kigger vi på Horizontal og Vertical i vores metrix
+    // her kigger vi på Horizontal og Vertical i vores matrix
     double dx = T.at<double>(0, 2);
     double dy = T.at<double>(1, 2);
     double da = std::atan2(T.at<double>(1, 0),
                            T.at<double>(0, 0));
 
-    smoothed_dx = alpha * smoothed_dx + (1.0 - alpha) * dx;
-    smoothed_dy = alpha * smoothed_dy + (1.0 - alpha) * dy;
-    smoothed_da = alpha * smoothed_da + (1.0 - alpha) * da;
+    traj_dx += dx;
+    traj_dy += dy;
+    traj_da += da;
+
+    smoothed_dx = alpha * smoothed_dx + (1.0 - alpha) * traj_dx;
+    smoothed_dy = alpha * smoothed_dy + (1.0 - alpha) * traj_dy;
+    smoothed_da = alpha * smoothed_da + (1.0 - alpha) * traj_da;
+
+    double diff_dx = smoothed_dx - traj_dx;
+    double diff_dy = smoothed_dy - traj_dy;
+    double diff_da = smoothed_da - traj_da;
 
     cv::Mat smoothedT = cv::Mat::eye(2, 3, CV_64F);
 
-    smoothedT.at<double>(0, 0) = std::cos(smoothed_da);
-    smoothedT.at<double>(0, 1) = -std::sin(smoothed_da);
-    smoothedT.at<double>(1, 0) = std::sin(smoothed_da);
-    smoothedT.at<double>(1, 1) = std::cos(smoothed_da);
+    smoothedT.at<double>(0, 0) = std::cos(diff_da);
+    smoothedT.at<double>(0, 1) = -std::sin(diff_da);
+    smoothedT.at<double>(1, 0) = std::sin(diff_da);
+    smoothedT.at<double>(1, 1) = std::cos(diff_da);
 
-    smoothedT.at<double>(0, 2) = smoothed_dx;
-    smoothedT.at<double>(1, 2) = smoothed_dy;
+    smoothedT.at<double>(0, 2) = diff_dx;
+    smoothedT.at<double>(1, 2) = diff_dy;
 
     cv::Mat stabilized;
-    cv::warpAffine(frameMat, stabilized, smoothedT, frameMat.size());
+    cv::warpAffine(frameMat, stabilized, smoothedT, frameMat.size(),
+               cv::INTER_LINEAR, cv::BORDER_REFLECT);
 
     // Convert 2x3 affine matrix to 3x3 for perspectiveTransform
     cv::Mat warp_3x3 = cv::Mat::eye(3, 3, CV_64F);
     smoothedT.copyTo(warp_3x3.rowRange(0, 2));
 
-    // Transform suggested center through the warp
     if (detection.valid)
     {
         std::vector<cv::Point2f> center_in = {detection.center};
         std::vector<cv::Point2f> center_out;
-        cv::perspectiveTransform(center_in, center_out, warp_3x3);
 
-        float cx = std::max(0.f, std::min(center_out[0].x, (float)(frame.data.cols - 1)));
-        float cy = std::max(0.f, std::min(center_out[0].y, (float)(frame.data.rows - 1)));
+        cv::perspectiveTransform(
+            center_in,
+            center_out,
+            warp_3x3);
+
+        float cx = std::max(
+            0.f,
+            std::min(center_out[0].x,
+                     (float)(frame.data.cols - 1)));
+
+        float cy = std::max(
+            0.f,
+            std::min(center_out[0].y,
+                     (float)(frame.data.rows - 1)));
+
         out.suggested_center = {cx, cy};
     }
 
+    prev_pts_ = currFiltered;
     prev_gray_ = gray.clone();
-    prev_kps_ = curr_kps;
-    prev_desc_ = curr_desc;
-    prevGray = gray.clone();
 
     if (frame_idx_ % 30 == 0)
     {
-        std::cout << "[Stabilizer] Frame " << frame_idx_
-                  << " | matches: " << goodMatches.size()
-                  << " | cache hit: " << (frame.features_computed ? "yes" : "no")
+        std::cout << "[Stabilizer] Frame "
+                  << frame_idx_
+                  << " | tracked points: "
+                  << prev_pts_.size()
                   << "\n";
     }
 
     ++frame_idx_;
 
-    StabilizedFrame result;
-    result.data = stabilized;
-    result.pts_ns = frame.pts_ns;
-    return result;
+    out.data = stabilized;
+    return out;
 }
 
-void Stabilizer::flush() {}
+void OFStabilizer::flush() {}
