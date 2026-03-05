@@ -1,9 +1,9 @@
-#include "Stabilization/Stabilizer.h"
+#include "Stabilization/OFStabilizer.h"
 #include <opencv2/calib3d.hpp>
 #include <opencv2/features2d.hpp>
 #include <iostream>
 
-bool Stabilizer::init(const std::string &, const std::string &)
+bool OFStabilizer::init(const std::string &, const std::string &)
 {
     if (!sharedorb_)
     {
@@ -27,7 +27,7 @@ bool Stabilizer::init(const std::string &, const std::string &)
     return true;
 }
 
-void Stabilizer::get_features(RawFrame &frame,
+void OFStabilizer::get_features(RawFrame &frame,
                               const cv::Mat &gray,
                               std::vector<cv::KeyPoint> &kps,
                               cv::Mat &desc) const
@@ -49,7 +49,7 @@ void Stabilizer::get_features(RawFrame &frame,
     frame.features_computed = true;
 }
 
-StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
+StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
                                       const DetectionResult &detection)
 {
     // Cast away const to cache features on this frame
@@ -208,4 +208,4 @@ StabilizedFrame Stabilizer::stabilize(const RawFrame &frame,
     return out;
 }
 
-void Stabilizer::flush() {}
+void OFStabilizer::flush() {}

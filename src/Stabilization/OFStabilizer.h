@@ -5,7 +5,7 @@
 #include <deque>
 
 
-class Stabilizer : public IVideoStabilizer
+class OFStabilizer : public IVideoStabilizer
 {
 public:
     bool init(const std::string &, const std::string &) override;

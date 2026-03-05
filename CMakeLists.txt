@@ -29,7 +29,7 @@ set(SOURCES
     src/FeatureDetection/FastDetector.cpp
     src/VideoInputStream/gstreamervideo.cpp
     src/FeatureDetection/StubDetector.cpp
-    src/Stabilization/Stabilizer.cpp
+    src/Stabilization/OFStabilizer.cpp
     src/FeatureDetection/BriskDetector.cpp
     src/Stabilization/StubStabilizer.cpp
     src/Cropping/StubCropper.cpp
