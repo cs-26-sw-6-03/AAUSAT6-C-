@@ -37,6 +37,14 @@ private:
     double smoothed_dx = 0.0;
     double smoothed_dy = 0.0;
     double smoothed_da = 0.0;
+
+    double traj_dx;
+    double traj_dy;
+    double traj_da; 
+
+    double diff_dx; 
+    double diff_dy; 
+    double diff_da;
     
     size_t frame_idx_ = 0;
 

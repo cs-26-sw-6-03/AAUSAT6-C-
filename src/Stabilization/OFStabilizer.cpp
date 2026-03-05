@@ -28,9 +28,9 @@ bool OFStabilizer::init(const std::string &, const std::string &)
 }
 
 void OFStabilizer::get_features(RawFrame &frame,
-                              const cv::Mat &gray,
-                              std::vector<cv::KeyPoint> &kps,
-                              cv::Mat &desc) const
+                                const cv::Mat &gray,
+                                std::vector<cv::KeyPoint> &kps,
+                                cv::Mat &desc) const
 {
     if (frame.features_computed)
     {
@@ -50,7 +50,7 @@ void OFStabilizer::get_features(RawFrame &frame,
 }
 
 StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
-                                      const DetectionResult &detection)
+                                        const DetectionResult &detection)
 {
     // Cast away const to cache features on this frame
     RawFrame &mutable_frame = const_cast<RawFrame &>(frame);
@@ -86,6 +86,16 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
     std::vector<cv::Point2f> curr_pts;
     std::vector<uchar> status;
     std::vector<float> err;
+
+    if (prev_pts_.size() < 10)
+    {
+        prev_pts_ = curr_pts;
+        prevGray = gray.clone();
+
+        StabilizedFrame result;
+        result.data = frameMat;
+        return result;
+    }
 
     cv::calcOpticalFlowPyrLK(
         prev_gray_,
@@ -146,22 +156,31 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
     double da = std::atan2(T.at<double>(1, 0),
                            T.at<double>(0, 0));
 
-    smoothed_dx = alpha * smoothed_dx + (1.0 - alpha) * dx;
-    smoothed_dy = alpha * smoothed_dy + (1.0 - alpha) * dy;
-    smoothed_da = alpha * smoothed_da + (1.0 - alpha) * da;
+    traj_dx += dx;
+    traj_dy += dy;
+    traj_da += da;
+
+    smoothed_dx = alpha * smoothed_dx + (1.0 - alpha) * traj_dx;
+    smoothed_dy = alpha * smoothed_dy + (1.0 - alpha) * traj_dy;
+    smoothed_da = alpha * smoothed_da + (1.0 - alpha) * traj_da;
+
+    double diff_dx = smoothed_dx - traj_dx;
+    double diff_dy = smoothed_dy - traj_dy;
+    double diff_da = smoothed_da - traj_da;
 
     cv::Mat smoothedT = cv::Mat::eye(2, 3, CV_64F);
 
-    smoothedT.at<double>(0, 0) = std::cos(smoothed_da);
-    smoothedT.at<double>(0, 1) = -std::sin(smoothed_da);
-    smoothedT.at<double>(1, 0) = std::sin(smoothed_da);
-    smoothedT.at<double>(1, 1) = std::cos(smoothed_da);
+    smoothedT.at<double>(0, 0) = std::cos(diff_da);
+    smoothedT.at<double>(0, 1) = -std::sin(diff_da);
+    smoothedT.at<double>(1, 0) = std::sin(diff_da);
+    smoothedT.at<double>(1, 1) = std::cos(diff_da);
 
-    smoothedT.at<double>(0, 2) = smoothed_dx;
-    smoothedT.at<double>(1, 2) = smoothed_dy;
+    smoothedT.at<double>(0, 2) = diff_dx;
+    smoothedT.at<double>(1, 2) = diff_dy;
 
     cv::Mat stabilized;
-    cv::warpAffine(frameMat, stabilized, smoothedT, frameMat.size());
+    cv::warpAffine(frameMat, stabilized, smoothedT, frameMat.size(),
+               cv::INTER_LINEAR, cv::BORDER_REFLECT);
 
     // Convert 2x3 affine matrix to 3x3 for perspectiveTransform
     cv::Mat warp_3x3 = cv::Mat::eye(3, 3, CV_64F);
