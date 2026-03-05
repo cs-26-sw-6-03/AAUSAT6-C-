@@ -57,12 +57,11 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
 
     StabilizedFrame out;
     out.pts_ns = frame.pts_ns;
-    out.suggested_center = detection.valid
-                               ? detection.center
-                               : cv::Point2f(frame.data.cols / 2.f, frame.data.rows / 2.f);
+
+    const cv::Point2f fallback_center(frame.data.cols / 2.f, frame.data.rows / 2.f);
+    out.suggested_center = detection.valid ? detection.center : fallback_center;
 
     cv::Mat frameMat = frame.data;
-
     cv::Mat gray;
     cv::cvtColor(frameMat, gray, cv::COLOR_BGR2GRAY);
 
@@ -72,15 +71,19 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         cv::Mat curr_desc;
         get_features(mutable_frame, gray, curr_kps, curr_desc);
 
+        prev_pts_.clear();
+        prev_pts_.reserve(curr_kps.size());
+        for (const auto &kp : curr_kps) prev_pts_.push_back(kp.pt);
+
         prev_gray_ = gray.clone();
         prev_kps_ = curr_kps;
         prev_desc_ = curr_desc;
         prevGray = gray.clone();
 
         StabilizedFrame result;
-        result.data = frameMat;
+        out.data = frameMat;
         ++frame_idx_;
-        return result;
+        return out;
     }
 
     std::vector<cv::Point2f> curr_pts;
@@ -135,10 +138,10 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         prev_gray_ = gray.clone();
 
         StabilizedFrame result;
-        result.data = frameMat;
+        out.data = frameMat;
 
         ++frame_idx_;
-        return result;
+        return out;
     }
     // her kigger vi på Horizontal og Vertical i vores matrix
     double dx = T.at<double>(0, 2);
@@ -172,33 +175,18 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
     cv::warpAffine(frameMat, stabilized, smoothedT, frameMat.size(),
                cv::INTER_LINEAR, cv::BORDER_REFLECT);
 
-    // Convert 2x3 affine matrix to 3x3 for perspectiveTransform
-    cv::Mat warp_3x3 = cv::Mat::eye(3, 3, CV_64F);
-    smoothedT.copyTo(warp_3x3.rowRange(0, 2));
+    cv::Mat warp3x3 = cv::Mat::eye(3, 3, CV_64F);
+    smoothedT.copyTo(warp3x3.rowRange(0, 2));
 
-    if (detection.valid)
-    {
-        std::vector<cv::Point2f> center_in = {detection.center};
-        std::vector<cv::Point2f> center_out;
+    std::vector<cv::Point2f> center_in  = { detection.valid ? detection.center : fallback_center };
+    std::vector<cv::Point2f> center_out;
+    cv::perspectiveTransform(center_in, center_out, warp3x3);
 
-        cv::perspectiveTransform(
-            center_in,
-            center_out,
-            warp_3x3);
-
-        float cx = std::max(
-            0.f,
-            std::min(center_out[0].x,
-                     (float)(frame.data.cols - 1)));
-
-        float cy = std::max(
-            0.f,
-            std::min(center_out[0].y,
-                     (float)(frame.data.rows - 1)));
-
-        out.suggested_center = {cx, cy};
-    }
-
+    out.suggested_center = {
+        std::max(0.f, std::min(center_out[0].x, static_cast<float>(stabilized.cols - 1))),
+        std::max(0.f, std::min(center_out[0].y, static_cast<float>(stabilized.rows - 1)))
+    };
+    
     prev_pts_ = currFiltered;
     prev_gray_ = gray.clone();
 
