@@ -8,7 +8,7 @@ class EDRansacStabilizer : public IVideoStabilizer {
 public:
 
 
-    int    orb_n_features        = 2000;
+    int    orb_n_features        = 400;
     float  lowe_ratio            = 0.75f;
     double ransac_reproj_thresh  = 3.0;   // pixels
     float  ed_threshold          = 0.5f;  // pixels
