@@ -42,3 +42,9 @@
 
 # Build elements
 build/
+
+.idea/
+
+*.png
+*.mp4
+*.mov
