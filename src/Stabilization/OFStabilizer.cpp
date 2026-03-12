@@ -70,6 +70,8 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         std::vector<cv::KeyPoint> curr_kps;
         cv::Mat curr_desc;
         get_features(mutable_frame, gray, curr_kps, curr_desc);
+        std::cout << "Fetching features 1\n";
+
 
         prev_pts_.clear();
         prev_pts_.reserve(curr_kps.size());
@@ -110,12 +112,13 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         }
     }
 
-    if (prevFiltered.size() < 10)
+    if (prevFiltered.size() < 100)
     {
         std::vector<cv::KeyPoint> kps;
         cv::Mat desc;
 
         get_features(mutable_frame, gray, kps, desc);
+        std::cout << "Fetching features 2\n";
 
         prev_pts_.clear();
         for (const auto &kp : kps)
@@ -181,6 +184,8 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
     std::vector<cv::Point2f> center_in  = { detection.valid ? detection.center : fallback_center };
     std::vector<cv::Point2f> center_out;
     cv::perspectiveTransform(center_in, center_out, warp3x3);
+
+    std::cout << "[Stabilizer] Initialized with center_out=" << center_out << ".\n";
 
     out.suggested_center = {
         std::max(0.f, std::min(center_out[0].x, static_cast<float>(stabilized.cols - 1))),
