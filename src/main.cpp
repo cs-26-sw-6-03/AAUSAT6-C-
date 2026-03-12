@@ -177,7 +177,10 @@ int main(int argc, char* argv[])
 
     // ── Frame loop ───────────────────────────────────────────────────────────
     std::size_t frame_count = 0;
-    constexpr int PROCESS_EVERY_N_FRAMES = 1;  // Process every frame (change to 2 for 50% speed improvement)
+    DetectionResult last_detection;
+    bool have_target = false;
+    last_detection.valid = false;
+    constexpr int PROCESS_EVERY_N_FRAMES = 1;   // Process every frame (change to 2 for 50% speed improvement)
 
     while (!g_shutdown.load() && output->is_open()) {
 
@@ -190,22 +193,35 @@ int main(int argc, char* argv[])
         RawFrame& raw = *maybe_frame;
 
         // 2. Object detection → get center point only (skip on some frames for speed).
-        DetectionResult detection;
-        if (frame_count % PROCESS_EVERY_N_FRAMES == 0) {
-            detection = detector->detect(raw);
-        } else {
-            detection.valid = false;
+        if (!have_target){
+            DetectionResult detection;
+            if (frame_count % PROCESS_EVERY_N_FRAMES == 0) {
+                detection = detector->detect(raw);
+                std::cout << "Detector runned\n";
+            } else {
+                detection.valid = false;
+            }
+        if (detection.valid){
+                last_detection = detection;
+                have_target = true;
+        }
         }
         
-        if (detection.valid) {
+        if (have_target) {
             // Overlay detected centre
             cv::circle(raw.data,
-                       static_cast<cv::Point>(detection.center),
+                       static_cast<cv::Point>(last_detection.center),
                        12, { 0, 255, 0 }, 2);
         }
 
         // 3. Video stabilization (operates at source resolution).
-        StabilizedFrame stabilized = stabilizer->stabilize(raw, detection);
+        StabilizedFrame stabilized = stabilizer->stabilize(raw, last_detection);
+
+        if(have_target) {
+            if (!stabilized.status_target) {
+                have_target = false;
+            }
+        }
 
         // 4. Crop to output resolution centred on the detected object.
         CroppedFrame cropped = cropper->crop(stabilized,

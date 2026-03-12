@@ -38,6 +38,7 @@ struct StabilizedFrame {
     cv::Mat               data;
     cv::Point2f           suggested_center; // propagated from detection
     std::int64_t          pts_ns = 0;
+    bool                  status_target = false;
 };
 
 // Final deliverable — cropped region at requested output resolution

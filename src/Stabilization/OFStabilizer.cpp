@@ -81,9 +81,9 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         prev_kps_ = curr_kps;
         prev_desc_ = curr_desc;
         prevGray = gray.clone();
-
-        StabilizedFrame result;
+        
         out.data = frameMat;
+        out.status_target = false;
         ++frame_idx_;
         return out;
     }
@@ -112,7 +112,7 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         }
     }
 
-    if (prevFiltered.size() < 100)
+    if (prevFiltered.size() < 200)
     {
         std::vector<cv::KeyPoint> kps;
         cv::Mat desc;
@@ -126,11 +126,10 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
 
         prev_gray_ = gray.clone();
 
-        StabilizedFrame result;
-        result.data = frameMat;
-
+        out.data = frameMat;
+        out.status_target = false;
         ++frame_idx_;
-        return result;
+        return out;
     }
 
     cv::Mat T = cv::estimateAffinePartial2D(prevFiltered, currFiltered); // denne extractor et 2 x 3 matrix.
@@ -140,9 +139,8 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
         prev_pts_ = currFiltered;
         prev_gray_ = gray.clone();
 
-        StabilizedFrame result;
         out.data = frameMat;
-
+        out.status_target = true;
         ++frame_idx_;
         return out;
     }
@@ -207,6 +205,7 @@ StabilizedFrame OFStabilizer::stabilize(const RawFrame &frame,
     ++frame_idx_;
 
     out.data = stabilized;
+    out.status_target = true;
     return out;
 }
 
